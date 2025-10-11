@@ -1,8 +1,23 @@
 // New Relic monitoring for QuipeAI
+interface NetworkInformation {
+  effectiveType?: '4g' | '3g' | '2g' | 'slow-2g';
+  type?: string;
+  downlink?: number;
+}
+
 declare global {
   interface Window {
-    newrelic?: any;
-    _nrCustomAttributes?: Record<string, any>;
+    newrelic?: {
+      addPageAction: (name: string, attributes: Record<string, unknown>) => void;
+      noticeError: (error: Error, attributes?: Record<string, unknown>) => void;
+      setCustomAttribute: (name: string, value: unknown) => void;
+    };
+    _nrCustomAttributes?: Record<string, unknown>;
+  }
+  interface Navigator {
+    connection?: NetworkInformation;
+    mozConnection?: NetworkInformation;
+    webkitConnection?: NetworkInformation;
   }
 }
 
@@ -35,7 +50,7 @@ const generateUserId = () => {
 };
 
 // Cache browser info to avoid sending redundant data with every event
-let cachedBrowserInfo: any = null;
+let cachedBrowserInfo: Record<string, unknown> | null = null;
 
 const getBrowserInfo = (forceRefresh = false) => {
   if (typeof window === 'undefined') return { environment: 'server', sessionId, userId };
@@ -52,7 +67,7 @@ const getBrowserInfo = (forceRefresh = false) => {
   
   const nav = navigator;
   const screen = window.screen;
-  const connection = (nav as any).connection || (nav as any).mozConnection || (nav as any).webkitConnection;
+  const connection = nav.connection || nav.mozConnection || nav.webkitConnection;
   const locationData = getLocationData();
   
   // Additional location inference without consent
@@ -68,7 +83,7 @@ const getBrowserInfo = (forceRefresh = false) => {
     // Get likely country from timezone (more accurate for Indian users)
     inferredCountry: getCountryFromTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone),
     // Smart country detection: prefer timezone/locale over IP if they indicate India
-    smartCountry: getSmartCountryDetection(nav.language, Intl.DateTimeFormat().resolvedOptions().timeZone, locationData.country)
+    smartCountry: getSmartCountryDetection(nav.language, Intl.DateTimeFormat().resolvedOptions().timeZone, locationData.country as string | null)
   };
   
   cachedBrowserInfo = {
@@ -123,7 +138,7 @@ const getBrowserInfo = (forceRefresh = false) => {
     displayMode: getPWADisplayMode(),
     isStandalone: window.matchMedia('(display-mode: standalone)').matches,
     hasServiceWorker: 'serviceWorker' in navigator,
-    isInWebAppiOSCapable: (window.navigator as any).standalone === true,
+    isInWebAppiOSCapable: (window.navigator as { standalone?: boolean }).standalone === true,
     
     // Performance Timing (calculated once)
     loadTime: performance.timing ? performance.timing.loadEventEnd - performance.timing.navigationStart : null,
@@ -183,8 +198,8 @@ const getLocationData = () => {
   const cached = sessionStorage.getItem('quipe_location_data');
   if (cached) {
     try {
-      return JSON.parse(cached);
-    } catch (e) {
+      return JSON.parse(cached) as Record<string, unknown>;
+    } catch {
       return {};
     }
   }
@@ -272,7 +287,7 @@ const getCurrencyFromLocale = () => {
       'ja-JP': 'JPY', 'ko-KR': 'KRW', 'zh-CN': 'CNY', 'pt-BR': 'BRL', 'ru-RU': 'RUB'
     };
     return currencyMap[locale] || locale.includes('IN') ? 'INR' : null;
-  } catch (e) {
+  } catch {
     return null;
   }
 };
@@ -326,7 +341,7 @@ const getPWAInstallationStatus = () => {
   }
   
   // Check iOS Safari standalone mode
-  if ((window.navigator as any).standalone === true) {
+  if ((window.navigator as { standalone?: boolean }).standalone === true) {
     return true;
   }
   
@@ -353,7 +368,7 @@ const getPWADisplayMode = () => {
   return 'browser';
 };
 
-const getConnectionType = (connection: any) => {
+const getConnectionType = (connection?: NetworkInformation) => {
   if (!connection) return 'unknown';
   
   if (connection.effectiveType) {
@@ -367,11 +382,11 @@ const getConnectionType = (connection: any) => {
   return 'unknown';
 };
 
-const getISPFromConnection = (connection: any) => {
+const getISPFromConnection = (connection?: NetworkInformation) => {
   if (!connection) return null;
   
   // Estimate ISP type based on connection characteristics
-  if (connection.effectiveType === '4g' && connection.downlink > 10) {
+  if (connection.effectiveType === '4g' && connection.downlink && connection.downlink > 10) {
     return 'fiber_or_5g';
   } else if (connection.effectiveType === '4g') {
     return 'broadband_4g';
@@ -384,7 +399,7 @@ const getISPFromConnection = (connection: any) => {
   return 'unknown';
 };
 
-async function sendEvent(eventType: string, eventName: string, attributes: any, incrementCounters = false) {
+async function sendEvent(eventType: string, eventName: string, attributes: Record<string, unknown>, incrementCounters = false) {
   if (typeof window === 'undefined') return;
   
   const apiKey = process.env.NEXT_PUBLIC_NEWRELIC_BROWSER_LICENSE_KEY;
@@ -439,13 +454,13 @@ export const initializeNewRelic = () => {
   });
 
   window.newrelic = {
-    addPageAction: (name: string, attributes: any) => sendEvent('BrowserPageAction', name, attributes),
-    noticeError: (error: Error, attributes?: any) => sendEvent('BrowserError', 'error', { 
+    addPageAction: (name: string, attributes: Record<string, unknown>) => sendEvent('BrowserPageAction', name, attributes),
+    noticeError: (error: Error, attributes?: Record<string, unknown>) => sendEvent('BrowserError', 'error', { 
       errorMessage: error.message, 
       errorStack: error.stack,
       ...attributes 
     }),
-    setCustomAttribute: (name: string, value: any) => {
+    setCustomAttribute: (name: string, value: unknown) => {
       if (!window._nrCustomAttributes) window._nrCustomAttributes = {};
       window._nrCustomAttributes[name] = value;
     }
@@ -453,12 +468,12 @@ export const initializeNewRelic = () => {
 };
 
 export const NewRelic = {
-  recordAppEvent: (eventName: string, attributes: any = {}, incrementCounters = false) => 
+  recordAppEvent: (eventName: string, attributes: Record<string, unknown> = {}, incrementCounters = false) => 
     sendEvent('AppLifecycle', eventName, attributes, incrementCounters),
   
-  recordBrowserEvent: (eventName: string, attributes: any = {}) => 
+  recordBrowserEvent: (eventName: string, attributes: Record<string, unknown> = {}) => 
     sendEvent('BrowserPageAction', eventName, attributes),
   
-  recordError: (name: string, message: string, attributes?: any) => 
+  recordError: (name: string, message: string, attributes?: Record<string, unknown>) => 
     sendEvent('BrowserError', name, { errorMessage: message, ...attributes })
 };

@@ -87,7 +87,7 @@ export function NewRelicProvider() {
           });
         } else if (entry.entryType === 'first-input') {
           // First Input Delay tracking with proper type checking
-          const fidEntry = entry as any; // PerformanceEventTiming
+          const fidEntry = entry as PerformanceEntry & { processingStart?: number; name?: string };
           if (fidEntry.processingStart) {
             NewRelic.recordAppEvent('first_input_delay', {
               metricValue: fidEntry.processingStart - entry.startTime,
