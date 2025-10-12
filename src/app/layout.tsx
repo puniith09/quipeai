@@ -34,6 +34,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: "cover", // Ensures safe-area-inset-* work properly
 };
 
 export default function RootLayout({

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { QuipeTextLogo } from '@/components/icons/QuipeTextLogo';
 import { SettingsButton } from '@/components/icons/SettingsButton';
 import { SearchButton } from '@/components/icons/SearchButton';
@@ -18,6 +18,32 @@ export default function Home() {
   const [isDragging, setIsDragging] = useState(false);
   const [hasMessages, setHasMessages] = useState(false);
   const [isAtTop, setIsAtTop] = useState(true);
+  const [viewportHeight, setViewportHeight] = useState('100vh');
+
+  // Set actual viewport height for mobile browsers
+  useEffect(() => {
+    const setVH = () => {
+      const vh = window.innerHeight;
+      document.documentElement.style.setProperty('--app-height', `${vh}px`);
+      setViewportHeight(`${vh}px`);
+    };
+
+    setVH();
+    
+    // Update on resize but not on scroll (which changes innerHeight on mobile)
+    let resizeTimer: NodeJS.Timeout;
+    const handleResize = () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(setVH, 100);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(resizeTimer);
+    };
+  }, []);
 
   const handleSettingsClick = () => {
     console.log('Settings clicked');
@@ -161,8 +187,13 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Message Input Container - Fixed at bottom */}
-      <div className="absolute bottom-0 left-0 right-0 z-50">
+      {/* Message Input Container - Fixed at bottom with safe area */}
+      <div 
+        className="absolute bottom-0 left-0 right-0 z-50"
+        style={{
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        }}
+      >
         <MessageInput 
           onSendMessage={handleSendMessage}
           placeholder="type a button with text the residency"
