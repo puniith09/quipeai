@@ -19,12 +19,12 @@ export const InstallPWA: React.FC<InstallPWAProps> = ({ inline = false }) => {
 
   useEffect(() => {
     // Check if device is iOS
-    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as unknown as { MSStream?: unknown }).MSStream;
     setIsIOS(isIOSDevice);
 
     // Check if app is already installed
     const isInstalled = window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as any).standalone === true;
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true;
 
     if (isInstalled) {
       setShowInstallButton(false);
@@ -184,7 +184,7 @@ export const InstallPWA: React.FC<InstallPWAProps> = ({ inline = false }) => {
               <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
                 <span className="text-2xl">2️⃣</span>
                 <div>
-                  <p className="font-medium text-gray-900">Select "Add to Home Screen"</p>
+                  <p className="font-medium text-gray-900">Select &quot;Add to Home Screen&quot;</p>
                   <p className="text-sm text-gray-600">Scroll down and tap this option</p>
                 </div>
               </div>
@@ -192,8 +192,8 @@ export const InstallPWA: React.FC<InstallPWAProps> = ({ inline = false }) => {
               <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
                 <span className="text-2xl">3️⃣</span>
                 <div>
-                  <p className="font-medium text-gray-900">Tap "Add"</p>
-                  <p className="text-sm text-gray-600">Confirm by tapping "Add" in the top right</p>
+                  <p className="font-medium text-gray-900">Tap &quot;Add&quot;</p>
+                  <p className="text-sm text-gray-600">Confirm by tapping &quot;Add&quot; in the top right</p>
                 </div>
               </div>
             </div>
