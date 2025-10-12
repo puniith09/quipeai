@@ -80,33 +80,44 @@ export const InstallPWA: React.FC<InstallPWAProps> = ({ inline = false }) => {
   }, []);
 
   const handleInstallClick = async () => {
+    console.log('Install button clicked');
+    console.log('isIOS:', isIOS, 'isAndroid:', isAndroid, 'deferredPrompt:', !!deferredPrompt);
+    
     // For iOS, show instructions modal
     if (isIOS) {
       setShowIOSPrompt(true);
       return;
     }
 
-    // For Android/Desktop Chrome with deferred prompt
+    // For Android/Desktop Chrome with deferred prompt - This triggers the NATIVE install dialog
     if (deferredPrompt) {
-      console.log('Showing install prompt');
-      // Show the install prompt
-      await deferredPrompt.prompt();
+      console.log('Showing native install prompt');
+      try {
+        // Show the native install prompt
+        await deferredPrompt.prompt();
 
-      // Wait for the user to respond to the prompt
-      const { outcome } = await deferredPrompt.userChoice;
+        // Wait for the user to respond to the prompt
+        const { outcome } = await deferredPrompt.userChoice;
 
-      console.log('User choice:', outcome);
+        console.log('User choice:', outcome);
 
-      if (outcome === 'accepted') {
-        console.log('User accepted the install prompt');
-      } else {
-        console.log('User dismissed the install prompt');
+        if (outcome === 'accepted') {
+          console.log('User accepted the install prompt');
+          setShowInstallButton(false);
+        } else {
+          console.log('User dismissed the install prompt');
+        }
+
+        // Clear the deferredPrompt so it can only be used once
+        setDeferredPrompt(null);
+      } catch (error) {
+        console.error('Error showing install prompt:', error);
+        // Fallback to instructions if prompt fails
+        setShowIOSPrompt(true);
       }
-
-      // Clear the deferredPrompt so it can only be used once
-      setDeferredPrompt(null);
     } else if (isAndroid) {
-      // For Android without deferred prompt, show instructions
+      // For Android without deferred prompt, show manual instructions as fallback
+      console.log('No deferred prompt available, showing instructions');
       setShowIOSPrompt(true);
     }
   };
