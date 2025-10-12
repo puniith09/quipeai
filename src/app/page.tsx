@@ -120,11 +120,12 @@ export default function Home() {
       className="flex flex-col bg-white overflow-hidden relative" 
       style={{ 
         height: viewportHeight,
-        touchAction: 'none' 
+        touchAction: 'none',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
       {/* Header */}
-      <header className="flex items-center justify-between px-5 pt-2 pb-0 bg-white flex-shrink-0" style={{ touchAction: 'none' }}>
+      <header className="flex items-center justify-between px-5 pt-2 pb-0 bg-white flex-shrink-0" style={{ touchAction: 'none', paddingTop: 'max(env(safe-area-inset-top, 0px), 8px)' }}>
         <QuipeTextLogo size={26} />
         <button 
           onClick={handleSettingsClick}
@@ -197,7 +198,7 @@ export default function Home() {
       <div 
         className="absolute left-0 right-0 z-50"
         style={{
-          bottom: 'max(env(safe-area-inset-bottom, 0px), 0px)',
+          bottom: 'calc(-0 * env(safe-area-inset-bottom, 0px))',
         }}
       >
         <MessageInput 
