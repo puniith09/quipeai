@@ -8,6 +8,7 @@ import { ChatWindow } from '@/components/chat/ChatWindow';
 import { MessageInput } from '@/components/chat/MessageInput';
 import { Carousel } from '@/components/Carousel';
 import { AnnouncementTicker } from '@/components/AnnouncementTicker';
+import { InstallPWA } from '@/components/InstallPWA';
 
 export default function Home() {
   const chatWindowRef = useRef<{ sendMessage: (message: string) => void } | null>(null);
@@ -127,13 +128,16 @@ export default function Home() {
       {/* Header */}
       <header className="flex items-center justify-between px-5 pt-2 pb-0 bg-white flex-shrink-0" style={{ touchAction: 'none', paddingTop: 'max(env(safe-area-inset-top, 0px), 8px)' }}>
         <QuipeTextLogo size={26} />
-        <button 
-          onClick={handleSettingsClick}
-          className="p-2 hover:opacity-70 transition-opacity"
-          aria-label="Settings"
-        >
-          <SettingsButton size={20} />
-        </button>
+        <div className="flex items-center gap-2">
+          <InstallPWA inline />
+          <button 
+            onClick={handleSettingsClick}
+            className="p-2 hover:opacity-70 transition-opacity"
+            aria-label="Settings"
+          >
+            <SettingsButton size={20} />
+          </button>
+        </div>
       </header>
 
       {/* Carousel Section */}
