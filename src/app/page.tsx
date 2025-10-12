@@ -125,19 +125,19 @@ export default function Home() {
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
+      {/* PWA Install Prompt - Bottom Banner */}
+      <InstallPWA />
+      
       {/* Header */}
       <header className="flex items-center justify-between px-5 pt-2 pb-0 bg-white flex-shrink-0" style={{ touchAction: 'none', paddingTop: 'max(env(safe-area-inset-top, 0px), 8px)' }}>
         <QuipeTextLogo size={26} />
-        <div className="flex items-center gap-2">
-          <InstallPWA inline />
-          <button 
-            onClick={handleSettingsClick}
-            className="p-2 hover:opacity-70 transition-opacity"
-            aria-label="Settings"
-          >
-            <SettingsButton size={20} />
-          </button>
-        </div>
+        <button 
+          onClick={handleSettingsClick}
+          className="p-2 hover:opacity-70 transition-opacity"
+          aria-label="Settings"
+        >
+          <SettingsButton size={20} />
+        </button>
       </header>
 
       {/* Carousel Section */}
