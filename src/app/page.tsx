@@ -116,7 +116,13 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-white overflow-hidden relative" style={{ touchAction: 'none' }}>
+    <div 
+      className="flex flex-col bg-white overflow-hidden relative" 
+      style={{ 
+        height: viewportHeight,
+        touchAction: 'none' 
+      }}
+    >
       {/* Header */}
       <header className="flex items-center justify-between px-5 pt-2 pb-0 bg-white flex-shrink-0" style={{ touchAction: 'none' }}>
         <QuipeTextLogo size={26} />
@@ -189,14 +195,14 @@ export default function Home() {
 
       {/* Message Input Container - Fixed at bottom with safe area */}
       <div 
-        className="absolute bottom-0 left-0 right-0 z-50"
+        className="absolute left-0 right-0 z-50"
         style={{
-          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          bottom: 'max(env(safe-area-inset-bottom, 0px), 0px)',
         }}
       >
         <MessageInput 
           onSendMessage={handleSendMessage}
-          placeholder="type a button with text the residency"
+          placeholder="residency"
         />
       </div>
     </div>

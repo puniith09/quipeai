@@ -51,7 +51,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   return (
-    <div className="relative h-[103px] w-full">
+    <div className="relative h-[103px] w-full px-2">
       {/* SVG Background */}
       <div className="absolute inset-0 w-full">
         <InputSectionBackground height={103} />
