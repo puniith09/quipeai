@@ -16,15 +16,24 @@ export const InstallPWA: React.FC<InstallPWAProps> = ({ inline = false }) => {
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [showIOSPrompt, setShowIOSPrompt] = useState(false);
+  const [isAndroid, setIsAndroid] = useState(false);
 
   useEffect(() => {
     // Check if device is iOS
     const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as unknown as { MSStream?: unknown }).MSStream;
     setIsIOS(isIOSDevice);
 
+    // Check if device is Android
+    const isAndroidDevice = /Android/.test(navigator.userAgent);
+    setIsAndroid(isAndroidDevice);
+
+    console.log('InstallPWA - iOS:', isIOSDevice, 'Android:', isAndroidDevice);
+
     // Check if app is already installed
     const isInstalled = window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as unknown as { standalone?: boolean }).standalone === true;
+
+    console.log('InstallPWA - Is Installed:', isInstalled);
 
     if (isInstalled) {
       setShowInstallButton(false);
@@ -37,8 +46,14 @@ export const InstallPWA: React.FC<InstallPWAProps> = ({ inline = false }) => {
       return;
     }
 
+    // For Android, show button if not installed (will trigger native prompt when clicked)
+    if (isAndroidDevice) {
+      setShowInstallButton(true);
+    }
+
     // Listen for the beforeinstallprompt event (Android/Desktop Chrome)
     const handleBeforeInstallPrompt = (e: Event) => {
+      console.log('beforeinstallprompt event fired');
       // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
       // Stash the event so it can be triggered later
@@ -51,6 +66,7 @@ export const InstallPWA: React.FC<InstallPWAProps> = ({ inline = false }) => {
 
     // Listen for app installed event
     const handleAppInstalled = () => {
+      console.log('App installed');
       setShowInstallButton(false);
       setDeferredPrompt(null);
     };
@@ -70,23 +86,29 @@ export const InstallPWA: React.FC<InstallPWAProps> = ({ inline = false }) => {
       return;
     }
 
-    // For Android/Desktop Chrome
-    if (!deferredPrompt) return;
+    // For Android/Desktop Chrome with deferred prompt
+    if (deferredPrompt) {
+      console.log('Showing install prompt');
+      // Show the install prompt
+      await deferredPrompt.prompt();
 
-    // Show the install prompt
-    await deferredPrompt.prompt();
+      // Wait for the user to respond to the prompt
+      const { outcome } = await deferredPrompt.userChoice;
 
-    // Wait for the user to respond to the prompt
-    const { outcome } = await deferredPrompt.userChoice;
+      console.log('User choice:', outcome);
 
-    if (outcome === 'accepted') {
-      console.log('User accepted the install prompt');
-    } else {
-      console.log('User dismissed the install prompt');
+      if (outcome === 'accepted') {
+        console.log('User accepted the install prompt');
+      } else {
+        console.log('User dismissed the install prompt');
+      }
+
+      // Clear the deferredPrompt so it can only be used once
+      setDeferredPrompt(null);
+    } else if (isAndroid) {
+      // For Android without deferred prompt, show instructions
+      setShowIOSPrompt(true);
     }
-
-    // Clear the deferredPrompt so it can only be used once
-    setDeferredPrompt(null);
   };
 
   if (!showInstallButton) return null;
@@ -165,37 +187,73 @@ export const InstallPWA: React.FC<InstallPWAProps> = ({ inline = false }) => {
             </div>
             
             <div className="space-y-4">
-              <p className="text-gray-700">
-                To install this app on your iPhone:
-              </p>
-              
-              <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
-                <span className="text-2xl">1️⃣</span>
-                <div>
-                  <p className="font-medium text-gray-900">Tap the Share button</p>
-                  <p className="text-sm text-gray-600">
-                    Look for the <svg className="inline w-4 h-4 mx-1" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M16 5l-1.42 1.42-1.59-1.59V16h-1.98V4.83L9.42 6.42 8 5l4-4 4 4zm4 5v11c0 1.1-.9 2-2 2H6c-1.11 0-2-.9-2-2V10c0-1.11.89-2 2-2h3v2H6v11h12V10h-3V8h3c1.1 0 2 .89 2 2z"/>
-                    </svg> icon at the bottom of the screen
+              {isIOS ? (
+                <>
+                  <p className="text-gray-700">
+                    To install this app on your iPhone:
                   </p>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
-                <span className="text-2xl">2️⃣</span>
-                <div>
-                  <p className="font-medium text-gray-900">Select &quot;Add to Home Screen&quot;</p>
-                  <p className="text-sm text-gray-600">Scroll down and tap this option</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
-                <span className="text-2xl">3️⃣</span>
-                <div>
-                  <p className="font-medium text-gray-900">Tap &quot;Add&quot;</p>
-                  <p className="text-sm text-gray-600">Confirm by tapping &quot;Add&quot; in the top right</p>
-                </div>
-              </div>
+                  
+                  <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
+                    <span className="text-2xl">1️⃣</span>
+                    <div>
+                      <p className="font-medium text-gray-900">Tap the Share button</p>
+                      <p className="text-sm text-gray-600">
+                        Look for the <svg className="inline w-4 h-4 mx-1" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M16 5l-1.42 1.42-1.59-1.59V16h-1.98V4.83L9.42 6.42 8 5l4-4 4 4zm4 5v11c0 1.1-.9 2-2 2H6c-1.11 0-2-.9-2-2V10c0-1.11.89-2 2-2h3v2H6v11h12V10h-3V8h3c1.1 0 2 .89 2 2z"/>
+                        </svg> icon at the bottom of the screen
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
+                    <span className="text-2xl">2️⃣</span>
+                    <div>
+                      <p className="font-medium text-gray-900">Select &quot;Add to Home Screen&quot;</p>
+                      <p className="text-sm text-gray-600">Scroll down and tap this option</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
+                    <span className="text-2xl">3️⃣</span>
+                    <div>
+                      <p className="font-medium text-gray-900">Tap &quot;Add&quot;</p>
+                      <p className="text-sm text-gray-600">Confirm by tapping &quot;Add&quot; in the top right</p>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-700">
+                    To install this app on your Android device:
+                  </p>
+                  
+                  <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
+                    <span className="text-2xl">1️⃣</span>
+                    <div>
+                      <p className="font-medium text-gray-900">Open Chrome menu</p>
+                      <p className="text-sm text-gray-600">
+                        Tap the three dots (⋮) in the top right corner
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
+                    <span className="text-2xl">2️⃣</span>
+                    <div>
+                      <p className="font-medium text-gray-900">Select &quot;Install app&quot; or &quot;Add to Home screen&quot;</p>
+                      <p className="text-sm text-gray-600">You should see this option in the menu</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
+                    <span className="text-2xl">3️⃣</span>
+                    <div>
+                      <p className="font-medium text-gray-900">Tap &quot;Install&quot;</p>
+                      <p className="text-sm text-gray-600">Confirm the installation when prompted</p>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
             
             <button
