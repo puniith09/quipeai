@@ -128,7 +128,7 @@ export const InstallPWA: React.FC = () => {
   }
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-sm">
+    <div className="fixed top-4 left-4 right-4 z-50 mx-auto max-w-sm">
       <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-lg">
         <svg 
           width="20" 
