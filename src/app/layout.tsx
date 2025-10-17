@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    statusBarStyle: "default", // White status bar
     title: "QuipeAI",
   },
   formatDetection: {
@@ -34,7 +34,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  viewportFit: "cover", // Ensures safe-area-inset-* work properly
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

@@ -12,13 +12,6 @@
   --font-sans: var(--font-poppins);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 html {
   height: 100vh;
   height: 100dvh; /* Dynamic viewport height - adjusts with browser UI */
