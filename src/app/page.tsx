@@ -46,11 +46,11 @@ export default function Home() {
   }, []);
 
   const handleSettingsClick = () => {
-    console.log('Settings clicked');
+    // TODO: Implement settings functionality
   };
 
   const handleSearchClick = () => {
-    console.log('Search clicked');
+    // TODO: Implement search functionality
   };
 
   const handleSendMessage = (message: string) => {

@@ -35,7 +35,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   const handleAttachmentPress = () => {
-    console.log('Attachment clicked');
+    // TODO: Implement file attachment functionality
   };
 
   const handleDivInput = (event: React.FormEvent<HTMLDivElement>) => {

@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface SearchButtonProps {
   size?: number;
   color?: string;

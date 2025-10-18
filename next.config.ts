@@ -9,7 +9,7 @@ export default withPWA({
   dest: "public",
   register: true,
   skipWaiting: true,
-  disable: false,
+  disable: process.env.NODE_ENV === "development",
   // Improve installation speed
   buildExcludes: [/middleware-manifest\.json$/],
   publicExcludes: ["!robots.txt", "!sitemap.xml"],

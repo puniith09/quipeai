@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface AttachmentButtonProps {
   size?: number;
   className?: string;
@@ -18,7 +16,7 @@ export const AttachmentButton: React.FC<AttachmentButtonProps> = ({
       className={className}
     >
       <defs>
-        <linearGradient id="gradient" x1="14" y1="0" x2="14" y2="28" gradientUnits="userSpaceOnUse">
+        <linearGradient id="attachment-gradient" x1="14" y1="0" x2="14" y2="28" gradientUnits="userSpaceOnUse">
           <stop stopColor="#007AFF" offset="0" />
           <stop stopColor="#5CE2FF" offset="1" />
         </linearGradient>
@@ -28,7 +26,7 @@ export const AttachmentButton: React.FC<AttachmentButtonProps> = ({
         cx="14" 
         cy="14" 
         r="14" 
-        fill="url(#gradient)"
+        fill="url(#attachment-gradient)"
       />
       
       <path 
