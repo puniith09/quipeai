@@ -1,9 +1,11 @@
+import { memo } from 'react';
+
 interface AttachmentButtonProps {
   size?: number;
   className?: string;
 }
 
-export const AttachmentButton: React.FC<AttachmentButtonProps> = ({ 
+const AttachmentButtonComponent: React.FC<AttachmentButtonProps> = ({ 
   size = 32,
   className 
 }) => {
@@ -36,3 +38,7 @@ export const AttachmentButton: React.FC<AttachmentButtonProps> = ({
     </svg>
   );
 };
+
+AttachmentButtonComponent.displayName = 'AttachmentButton';
+
+export const AttachmentButton = memo(AttachmentButtonComponent);

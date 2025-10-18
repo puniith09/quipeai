@@ -1,10 +1,12 @@
+import { memo } from 'react';
+
 interface SearchButtonProps {
   size?: number;
   color?: string;
   className?: string;
 }
 
-export const SearchButton: React.FC<SearchButtonProps> = ({ 
+const SearchButtonComponent: React.FC<SearchButtonProps> = ({ 
   size = 24, 
   color = 'white',
   className 
@@ -28,3 +30,7 @@ export const SearchButton: React.FC<SearchButtonProps> = ({
     </svg>
   );
 };
+
+SearchButtonComponent.displayName = 'SearchButton';
+
+export const SearchButton = memo(SearchButtonComponent);

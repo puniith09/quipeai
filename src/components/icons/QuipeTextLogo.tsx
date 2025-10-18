@@ -1,3 +1,5 @@
+import { memo } from 'react';
+
 interface QuipeTextLogoProps {
   size?: number;
   width?: number;
@@ -5,7 +7,7 @@ interface QuipeTextLogoProps {
   className?: string;
 }
 
-export const QuipeTextLogo = ({ 
+const QuipeTextLogoComponent = ({ 
   size = 32, 
   width, 
   height,
@@ -119,3 +121,7 @@ export const QuipeTextLogo = ({
     </svg>
   );
 };
+
+QuipeTextLogoComponent.displayName = 'QuipeTextLogo';
+
+export const QuipeTextLogo = memo(QuipeTextLogoComponent);

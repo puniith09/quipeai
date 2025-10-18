@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { QuipeTextLogo } from '@/components/icons/QuipeTextLogo';
 import { SettingsButton } from '@/components/icons/SettingsButton';
 import { SearchButton } from '@/components/icons/SearchButton';
@@ -45,15 +45,15 @@ export default function Home() {
     };
   }, []);
 
-  const handleSettingsClick = () => {
+  const handleSettingsClick = useCallback(() => {
     // TODO: Implement settings functionality
-  };
+  }, []);
 
-  const handleSearchClick = () => {
+  const handleSearchClick = useCallback(() => {
     // TODO: Implement search functionality
-  };
+  }, []);
 
-  const handleSendMessage = (message: string) => {
+  const handleSendMessage = useCallback((message: string) => {
     // Send message through the ChatWindow
     chatWindowRef.current?.sendMessage(message);
     
@@ -62,22 +62,22 @@ export default function Home() {
       setHasMessages(true);
       setIsExpanded(true);
     }
-  };
+  }, [hasMessages]);
 
-  const handleChatScroll = () => {
+  const handleChatScroll = useCallback(() => {
     if (chatScrollRef.current) {
       const { scrollTop } = chatScrollRef.current;
       setIsAtTop(scrollTop <= 5); // Consider at top if within 5px
     }
-  };
+  }, []);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
     setDragStartY(e.touches[0].clientY);
     setIsDragging(true);
     setCurrentTranslate(0);
-  };
+  }, []);
 
-  const handleTouchMove = (e: React.TouchEvent) => {
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!isDragging) return;
     
     const currentY = e.touches[0].clientY;
@@ -100,9 +100,9 @@ export default function Home() {
       setCurrentTranslate(diff);
       e.preventDefault();
     }
-  };
+  }, [isDragging, dragStartY, hasMessages, isAtTop, isExpanded]);
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = useCallback(() => {
     setIsDragging(false);
     // If dragged more than 50px, toggle state
     if (Math.abs(currentTranslate) > 50) {
@@ -113,7 +113,7 @@ export default function Home() {
       }
     }
     setCurrentTranslate(0);
-  };
+  }, [currentTranslate]);
 
   return (
     <div 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 
 interface CarouselSlide {
   id: number;
@@ -51,21 +51,35 @@ const slides: CarouselSlide[] = [
 export const Carousel: React.FC = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
-      if (!scrollRef.current) return;
-      
-      const scrollLeft = scrollRef.current.scrollLeft;
-      const cardWidth = window.innerWidth - 40 + 24; // Full width minus padding (20px each side) + gap (1.5rem = 24px)
-      const index = Math.round(scrollLeft / cardWidth);
-      setActiveIndex(Math.max(0, Math.min(index, slides.length - 1)));
+      // Clear existing timeout
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+
+      // Throttle: wait 100ms after last scroll to update
+      scrollTimeoutRef.current = setTimeout(() => {
+        if (!scrollRef.current) return;
+        
+        const scrollLeft = scrollRef.current.scrollLeft;
+        const cardWidth = window.innerWidth - 40 + 24; // Full width minus padding (20px each side) + gap (1.5rem = 24px)
+        const index = Math.round(scrollLeft / cardWidth);
+        setActiveIndex(Math.max(0, Math.min(index, slides.length - 1)));
+      }, 100);
     };
 
     const scrollElement = scrollRef.current;
     if (scrollElement) {
-      scrollElement.addEventListener('scroll', handleScroll);
-      return () => scrollElement.removeEventListener('scroll', handleScroll);
+      scrollElement.addEventListener('scroll', handleScroll, { passive: true });
+      return () => {
+        scrollElement.removeEventListener('scroll', handleScroll);
+        if (scrollTimeoutRef.current) {
+          clearTimeout(scrollTimeoutRef.current);
+        }
+      };
     }
   }, []);
 

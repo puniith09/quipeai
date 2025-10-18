@@ -1,8 +1,10 @@
+import { memo } from 'react';
+
 interface InputSectionBackgroundProps {
   height?: number;
 }
 
-export const InputSectionBackground: React.FC<InputSectionBackgroundProps> = ({ 
+const InputSectionBackgroundComponent: React.FC<InputSectionBackgroundProps> = ({ 
   height = 103 
 }) => {
   return (
@@ -22,3 +24,7 @@ export const InputSectionBackground: React.FC<InputSectionBackgroundProps> = ({
     </svg>
   );
 };
+
+InputSectionBackgroundComponent.displayName = 'InputSectionBackground';
+
+export const InputSectionBackground = memo(InputSectionBackgroundComponent);

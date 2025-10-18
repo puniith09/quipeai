@@ -1,10 +1,12 @@
+import { memo } from 'react';
+
 interface SendButtonProps {
   size?: number;
   color?: string;
   className?: string;
 }
 
-export const SendButton: React.FC<SendButtonProps> = ({ 
+const SendButtonComponent: React.FC<SendButtonProps> = ({ 
   size = 22, 
   color = 'white',
   className 
@@ -24,3 +26,7 @@ export const SendButton: React.FC<SendButtonProps> = ({
     </svg>
   );
 };
+
+SendButtonComponent.displayName = 'SendButton';
+
+export const SendButton = memo(SendButtonComponent);

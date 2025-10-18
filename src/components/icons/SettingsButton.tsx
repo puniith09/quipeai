@@ -1,10 +1,12 @@
+import { memo } from 'react';
+
 interface SettingsButtonProps {
   size?: number;
   color?: string;
   className?: string;
 }
 
-export const SettingsButton: React.FC<SettingsButtonProps> = ({ 
+const SettingsButtonComponent: React.FC<SettingsButtonProps> = ({ 
   size = 24, 
   color = '#333333',
   className 
@@ -24,3 +26,7 @@ export const SettingsButton: React.FC<SettingsButtonProps> = ({
     </svg>
   );
 };
+
+SettingsButtonComponent.displayName = 'SettingsButton';
+
+export const SettingsButton = memo(SettingsButtonComponent);

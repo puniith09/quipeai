@@ -1,8 +1,10 @@
+import { memo } from 'react';
+
 interface TypeInputBackgroundProps {
   height?: number;
 }
 
-export const TypeInputBackground: React.FC<TypeInputBackgroundProps> = ({ 
+const TypeInputBackgroundComponent: React.FC<TypeInputBackgroundProps> = ({ 
   height = 36 
 }) => {
   return (
@@ -23,3 +25,7 @@ export const TypeInputBackground: React.FC<TypeInputBackgroundProps> = ({
     </svg>
   );
 };
+
+TypeInputBackgroundComponent.displayName = 'TypeInputBackground';
+
+export const TypeInputBackground = memo(TypeInputBackgroundComponent);
