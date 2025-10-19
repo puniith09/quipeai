@@ -151,7 +151,7 @@ const getBrowserInfo = (forceRefresh = false) => {
     viewportSize: `${window.innerWidth}x${window.innerHeight}`,
     browserEngine: `${getBrowserName()} ${getBrowserVersion()}`,
     
-    // Location Data (mixed: IP-based + inferred + optional GPS)
+    // Location Data (IP-based + inferred from timezone/locale)
     ...locationData,
     ...inferredLocation
   };
@@ -210,7 +210,7 @@ const requestLocationData = async () => {
   if (typeof window === 'undefined') return;
   
   try {
-    // First try to get IP-based location (no permission needed)
+    // Get IP-based location only (no GPS permission needed)
     const ipLocationResponse = await fetch('/api/location');
     if (ipLocationResponse.ok) {
       const ipLocation = await ipLocationResponse.json();
@@ -222,38 +222,9 @@ const requestLocationData = async () => {
         locationTimeIST: new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' })
       };
       sessionStorage.setItem('quipe_location_data', JSON.stringify(locationData));
-      return;
     }
   } catch (error) {
     console.warn('Failed to get IP location:', error);
-  }
-  
-  // Fallback to GPS location (requires permission) - optional
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const locationData = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy,
-          source: 'gps',
-          timestamp: Date.now(),
-          locationDateIST: formatIndianDate(),
-          locationTimeIST: new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' })
-        };
-        
-        // Merge with any existing IP location data
-        const existing = getLocationData();
-        const merged = { ...existing, ...locationData };
-        sessionStorage.setItem('quipe_location_data', JSON.stringify(merged));
-        console.log('📍 GPS location collected:', locationData);
-      },
-      () => {
-        // GPS denied - IP location is still available
-        console.log('📍 GPS location denied, using IP location only');
-      },
-      { timeout: 5000, maximumAge: 300000 } // 5 minute cache
-    );
   }
 };
 
@@ -446,7 +417,7 @@ export const initializeNewRelic = () => {
   const visitCount = parseInt(localStorage.getItem('quipe_visit_count') || '0') + 1;
   localStorage.setItem('quipe_visit_count', visitCount.toString());
 
-  // Request location data for analytics immediately and wait for it
+  // Request IP-based location data for analytics
   requestLocationData().then(() => {
     // Refresh browser info cache after location data is available
     cachedBrowserInfo = null;

@@ -46,14 +46,44 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>((_, r
     setIsLoading(true);
 
     try {
-      // Simulate API call - replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Build conversation history for context
+      const conversationHistory = messages.map(msg => ({
+        role: msg.type === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      }));
+
+      // Add current message
+      conversationHistory.push({
+        role: 'user',
+        content: messageContent.trim()
+      });
+
+      // Call our Next.js API route (server-side) instead of OpenRouter directly
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: conversationHistory,
+          temperature: 0.7,
+          max_tokens: 1000,
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const assistantResponse = data.choices?.[0]?.message?.content || 'No response generated';
       
       // Add assistant message
       const assistantMessage: Message = {
         id: `assistant-${Date.now()}`,
         type: 'assistant',
-        content: 'This is a placeholder response. Integrate your AI API here.',
+        content: assistantResponse,
         timestamp: new Date(),
       };
 
@@ -65,7 +95,9 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>((_, r
       const errorMessage: Message = {
         id: `error-${Date.now()}`,
         type: 'assistant',
-        content: 'Sorry, I encountered an error. Please try again.',
+        content: error instanceof Error 
+          ? `Error: ${error.message}` 
+          : 'Sorry, I encountered an error. Please try again.',
         timestamp: new Date(),
       };
 
@@ -107,16 +139,8 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>((_, r
                   : 'bg-[#2a2a2a] rounded-bl-[4px]'
               }`}
             >
-              <div className="text-white text-base mb-1">
+              <div className="text-white text-base">
                 {message.content}
-              </div>
-              
-              <div 
-                className={`text-white text-[11px] opacity-70 mt-1 ${
-                  message.type === 'user' ? 'text-right' : 'text-left'
-                }`}
-              >
-                {formatTime(message.timestamp)}
               </div>
             </div>
           </div>
