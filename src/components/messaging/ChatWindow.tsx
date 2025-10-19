@@ -23,14 +23,6 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>((_, r
   const [isLoading, setIsLoading] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: false 
-    });
-  };
-
   const sendMessage = async (messageContent: string) => {
     if (!messageContent.trim() || isLoading) return;
 
