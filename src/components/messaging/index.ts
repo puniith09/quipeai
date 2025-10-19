@@ -1,8 +1,9 @@
-// Icon components
-export { QuipeTextLogo } from './QuipeTextLogo';
-export { SettingsButton } from './SettingsButton';
+export { Messaging } from './Messaging';
+export { ChatHeader } from './ChatHeader';
+export { ChatWindow } from './ChatWindow';
+export { MessageInput } from './MessageInput';
 export { SearchButton } from './SearchButton';
-export { SendButton } from './SendButton';
 export { AttachmentButton } from './AttachmentButton';
+export { SendButton } from './SendButton';
 export { InputSectionBackground } from './InputSectionBackground';
 export { TypeInputBackground } from './TypeInputBackground';

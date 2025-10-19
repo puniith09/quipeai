@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { AttachmentButton } from '@/components/icons/AttachmentButton';
-import { SendButton } from '@/components/icons/SendButton';
-import { InputSectionBackground } from '@/components/icons/InputSectionBackground';
-import { TypeInputBackground } from '@/components/icons/TypeInputBackground';
+import { AttachmentButton } from './AttachmentButton';
+import { SendButton } from './SendButton';
+import { InputSectionBackground } from './InputSectionBackground';
+import { TypeInputBackground } from './TypeInputBackground';
 
 interface MessageInputProps {
   onSendMessage?: (message: string) => void;

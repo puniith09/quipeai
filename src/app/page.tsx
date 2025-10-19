@@ -1,13 +1,9 @@
 'use client';
 
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { QuipeTextLogo } from '@/components/icons/QuipeTextLogo';
-import { SettingsButton } from '@/components/icons/SettingsButton';
-import { SearchButton } from '@/components/icons/SearchButton';
-import { ChatWindow } from '@/components/chat/ChatWindow';
-import { MessageInput } from '@/components/chat/MessageInput';
-import { Carousel } from '@/components/Carousel';
-import { AnnouncementTicker } from '@/components/AnnouncementTicker';
+import { Header } from '@/components/header';
+import { Suggestions } from '@/components/suggestions';
+import { Messaging } from '@/components/messaging';
 
 export default function Home() {
   const chatWindowRef = useRef<{ sendMessage: (message: string) => void } | null>(null);
@@ -124,88 +120,28 @@ export default function Home() {
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
-      {/* Header */}
-      <header className="flex items-center justify-between px-5 pt-2 pb-0 bg-white flex-shrink-0" style={{ touchAction: 'none', paddingTop: 'max(env(safe-area-inset-top, 0px), 8px)' }}>
-        <QuipeTextLogo size={26} />
-        <button 
-          onClick={handleSettingsClick}
-          className="p-2 hover:opacity-70 transition-opacity"
-          aria-label="Settings"
-        >
-          <SettingsButton size={20} />
-        </button>
-      </header>
+      {/* Header Section */}
+      <Header onSettingsClick={handleSettingsClick} />
 
-      {/* Carousel Section */}
-      <div className="flex-shrink-0" style={{ touchAction: 'pan-x' }}>
-        <Carousel />
-      </div>
+      {/* Suggestions Section */}
+      <Suggestions announcementMessage="Indian Railways extends Covid guidelines, doing thermal screening of passengers" />
 
-      {/* Announcement Ticker */}
-      <div className="flex-shrink-0" style={{ touchAction: 'none' }}>
-        <AnnouncementTicker message="Indian Railways extends Covid guidelines, doing thermal screening of passengers" />
-      </div>
-
-      {/* Chat Section - Swipeable */}
-      <main 
-        className="absolute bottom-0 left-0 right-0 bg-black rounded-t-[24px] flex flex-col"
-        style={{ 
-          height: 'calc(100% - 50px)',
-          transform: isDragging 
-            ? `translateY(${isExpanded ? currentTranslate : (200 - Math.abs(currentTranslate))}px)`
-            : `translateY(${isExpanded ? 0 : 200}px)`,
-          transition: isDragging ? 'none' : 'transform 0.3s ease-out',
-          touchAction: 'pan-y'
-        }}
+      {/* Messaging Section */}
+      <Messaging
+        isExpanded={isExpanded}
+        isDragging={isDragging}
+        currentTranslate={currentTranslate}
+        hasMessages={hasMessages}
+        isAtTop={isAtTop}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-      >
-        {/* Chat Header - Drag Handle */}
-        <div className="relative px-5 py-2 bg-[#313131] rounded-t-[24px] cursor-grab active:cursor-grabbing">
-          {/* Centered drag bar */}
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 bg-gray-600 rounded-full" />
-          
-          {/* Header content */}
-          <div className="flex items-center justify-between pt-2">
-            <h1 className="text-white text-lg font-bold">Chat</h1>
-            <div className="flex gap-3">
-              <button 
-                onClick={handleSearchClick}
-                className="p-2 hover:opacity-70 transition-opacity"
-                aria-label="Search"
-              >
-                <SearchButton size={20} color="white" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Messages Container - Takes remaining space */}
-        <div 
-          ref={chatScrollRef}
-          className="flex-1 overflow-y-auto"
-          onScroll={handleChatScroll}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
-          <ChatWindow ref={chatWindowRef} />
-        </div>
-      </main>
-
-      {/* Message Input Container - Fixed at bottom with safe area */}
-      <div 
-        className="absolute left-0 right-0 z-50"
-        style={{
-          bottom: 'calc(-0 * env(safe-area-inset-bottom, 0px))',
-        }}
-      >
-        <MessageInput 
-          onSendMessage={handleSendMessage}
-          placeholder="residency"
-        />
-      </div>
+        onChatScroll={handleChatScroll}
+        onSendMessage={handleSendMessage}
+        onSearchClick={handleSearchClick}
+        chatScrollRef={chatScrollRef}
+        chatWindowRef={chatWindowRef}
+      />
     </div>
   );
 }

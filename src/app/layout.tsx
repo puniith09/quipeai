@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Poppins } from "next/font/google";
-import { NewRelicProvider } from "@/components/monitoring/newrelic-provider";
+import { NewRelicProvider } from "@/monitoring/newrelic-provider";
 import "./globals.css";
 
 const poppins = Poppins({
