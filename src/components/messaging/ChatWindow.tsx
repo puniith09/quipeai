@@ -285,20 +285,17 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
       const { scrollTop, scrollHeight, clientHeight } = container;
       const isAtBottom = Math.abs(scrollHeight - clientHeight - scrollTop) < 50;
       
-      // If user scrolled up, mark as manual scrolling
+      // If user scrolled up, mark as manual scrolling and keep it that way
       if (!isAtBottom) {
         setIsUserScrolling(true);
         
-        // Clear existing timeout
+        // Clear any existing timeout to prevent auto-reset
         if (scrollTimeoutRef.current) {
           clearTimeout(scrollTimeoutRef.current);
+          scrollTimeoutRef.current = null;
         }
-        
-        // Reset after 3 seconds of no scrolling
-        scrollTimeoutRef.current = setTimeout(() => {
-          setIsUserScrolling(false);
-        }, 3000);
       } else {
+        // User scrolled back to bottom - resume auto-scroll
         setIsUserScrolling(false);
       }
     };
