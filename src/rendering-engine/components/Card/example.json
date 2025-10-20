@@ -1,0 +1,52 @@
+{
+  "type": "card",
+  "props": {
+    "title": "Movie Recommendations",
+    "subtitle": "Popular films you might enjoy",
+    "variant": "default",
+    "backgroundColor": "#ffffff",
+    "borderColor": "#e5e7eb",
+    "borderRadius": "8px",
+    "padding": "16px",
+    "shadow": "none",
+    "width": "100%",
+    "spacing": "12px"
+  },
+  "children": [
+    {
+      "type": "text",
+      "props": {
+        "content": "Here are some great movies:",
+        "variant": "body",
+        "color": "#111827",
+        "fontSize": "16px",
+        "fontWeight": "normal",
+        "align": "left"
+      }
+    },
+    {
+      "type": "list",
+      "props": {
+        "items": ["Inception", "The Matrix", "Interstellar", "The Dark Knight"],
+        "variant": "bullets",
+        "color": "#374151",
+        "fontSize": "14px",
+        "spacing": "8px"
+      }
+    },
+    {
+      "type": "button",
+      "props": {
+        "label": "See More",
+        "variant": "primary",
+        "size": "md",
+        "backgroundColor": "#2563eb",
+        "textColor": "#ffffff",
+        "borderRadius": "8px",
+        "padding": "8px 16px",
+        "fontSize": "16px",
+        "fontWeight": "medium"
+      }
+    }
+  ]
+}

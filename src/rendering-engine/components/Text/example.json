@@ -1,0 +1,15 @@
+{
+  "type": "text",
+  "props": {
+    "content": "This is sample text content",
+    "variant": "body",
+    "size": "md",
+    "weight": "normal",
+    "color": "#111827",
+    "align": "left",
+    "italic": false,
+    "underline": false,
+    "lineHeight": "1.5",
+    "letterSpacing": "normal"
+  }
+}

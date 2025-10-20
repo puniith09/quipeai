@@ -1,0 +1,20 @@
+{
+  "type": "button",
+  "props": {
+    "label": "Click Me",
+    "variant": "primary",
+    "size": "md",
+    "action": "submit",
+    "backgroundColor": "#2563eb",
+    "textColor": "#ffffff",
+    "borderRadius": "8px",
+    "borderWidth": "0px",
+    "borderColor": "transparent",
+    "padding": "8px 16px",
+    "fontSize": "16px",
+    "fontWeight": "medium",
+    "width": "auto",
+    "height": "auto",
+    "shadow": "none"
+  }
+}

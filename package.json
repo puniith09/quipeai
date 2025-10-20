@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "npm run generate:components && next dev",
+    "build": "npm run generate:components && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "generate:components": "node scripts/generate-components.js"
   },
   "dependencies": {
     "@newrelic/browser-agent": "^1.299.0",
