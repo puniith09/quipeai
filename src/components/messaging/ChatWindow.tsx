@@ -324,6 +324,11 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
 
   // Additional scroll effect that runs more frequently during updates
   useEffect(() => {
+    // Only run interval during active streaming or loading
+    if (!isLoading && !isLoadingComponent) {
+      return;
+    }
+
     const scrollToBottom = () => {
       if (scrollContainerRef.current && !isUserScrolling) {
         // Smooth scroll during streaming
@@ -334,14 +339,11 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
       }
     };
 
-    // Scroll immediately
-    scrollToBottom();
-
     // Set up interval to keep scrolling during streaming with smooth behavior
     const intervalId = setInterval(scrollToBottom, 300);
 
     return () => clearInterval(intervalId);
-  }, [messages.length, isUserScrolling]); // Trigger when message count changes or scroll state changes
+  }, [messages.length, isUserScrolling, isLoading, isLoadingComponent]); // Only run when actively loading
 
   /**
    * AI-powered button press handler - generates natural user message
