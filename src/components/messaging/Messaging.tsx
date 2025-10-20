@@ -63,7 +63,7 @@ export const Messaging: React.FC<MessagingProps> = ({
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
         >
-          <ChatWindow ref={chatWindowRef} />
+          <ChatWindow ref={chatWindowRef} scrollContainerRef={chatScrollRef} />
         </div>
       </main>
 

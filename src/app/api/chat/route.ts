@@ -185,7 +185,7 @@ Your style should feel like chatting with a friend - engaging, descriptive, and 
                         controller.enqueue(encoder.encode(sseLine));
                         
                         // Delay between characters (30ms for readable speed)
-                        await new Promise(resolve => setTimeout(resolve, 30));
+                        await new Promise(resolve => setTimeout(resolve, 12));
                       }
                     } else {
                       // Pass through non-content chunks as-is

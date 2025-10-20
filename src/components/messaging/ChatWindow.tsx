@@ -16,19 +16,24 @@ interface ChatWindowRef {
   sendMessage: (message: string) => void;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface ChatWindowProps {
-  // Props can be added here in future
+  scrollContainerRef?: React.RefObject<HTMLDivElement | null>;
 }
 
-export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>((_, ref) => {
+export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ scrollContainerRef: externalScrollRef }, ref) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingComponent, setIsLoadingComponent] = useState(false);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const internalScrollRef = useRef<HTMLDivElement>(null);
+  
+  // Use external ref if provided, otherwise use internal ref
+  const scrollContainerRef = externalScrollRef || internalScrollRef;
 
   const sendMessage = async (messageContent: string) => {
     if (!messageContent.trim() || isLoading) return;
+
+    // Reset user scrolling state when sending a message - force scroll to bottom
+    setIsUserScrolling(false);
 
     // Add user message
     const userMessage: Message = {
@@ -40,6 +45,14 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>((_, r
 
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
+
+    // Scroll to bottom immediately when user sends a message
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({
+        top: scrollContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
 
     try {
       // Build conversation history for context
@@ -143,11 +156,9 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>((_, r
 
       setMessages(prev => [...prev, textMessage]);
 
-      // Hide "quiping..." as soon as we start streaming
-      setIsLoading(false);
-
       // Stream the text response
       let fullTextContent = '';
+      let isFirstChunk = true;
       
       if (textResponse.body) {
         const reader = textResponse.body.getReader();
@@ -171,6 +182,12 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>((_, r
                   const parsed = JSON.parse(data);
                   const content = parsed.choices?.[0]?.delta?.content;
                   if (content) {
+                    // Hide "quiping..." only when we receive the first content
+                    if (isFirstChunk) {
+                      setIsLoading(false);
+                      isFirstChunk = false;
+                    }
+                    
                     fullTextContent += content;
                     
                     // Update message with streaming content
@@ -189,8 +206,13 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>((_, r
           }
         } catch (streamError) {
           console.error('Streaming error:', streamError);
+          // Hide loading if there's an error
+          setIsLoading(false);
         }
       }
+      
+      // Ensure loading is hidden even if no content was streamed
+      setIsLoading(false);
 
       // ====== STEP 2: Check if Component is Ready ======
       // Use Promise.race to check if component is ready without waiting
@@ -250,15 +272,76 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>((_, r
     sendMessage,
   }));
 
-  // Auto scroll to bottom when messages change
+  // Track if user has manually scrolled up
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Detect manual scroll
   useEffect(() => {
-    if (scrollContainerRef.current) {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const isAtBottom = Math.abs(scrollHeight - clientHeight - scrollTop) < 50;
+      
+      // If user scrolled up, mark as manual scrolling
+      if (!isAtBottom) {
+        setIsUserScrolling(true);
+        
+        // Clear existing timeout
+        if (scrollTimeoutRef.current) {
+          clearTimeout(scrollTimeoutRef.current);
+        }
+        
+        // Reset after 3 seconds of no scrolling
+        scrollTimeoutRef.current = setTimeout(() => {
+          setIsUserScrolling(false);
+        }, 3000);
+      } else {
+        setIsUserScrolling(false);
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, [scrollContainerRef]);
+
+  // Auto scroll to bottom when messages change (only if user isn't scrolling)
+  useEffect(() => {
+    if (scrollContainerRef.current && !isUserScrolling) {
       scrollContainerRef.current.scrollTo({
         top: scrollContainerRef.current.scrollHeight,
         behavior: 'smooth'
       });
     }
-  }, [messages, isLoading, isLoadingComponent]);
+  }, [messages, isLoading, isLoadingComponent, isUserScrolling]);
+
+  // Additional scroll effect that runs more frequently during updates
+  useEffect(() => {
+    const scrollToBottom = () => {
+      if (scrollContainerRef.current && !isUserScrolling) {
+        // Smooth scroll during streaming
+        scrollContainerRef.current.scrollTo({
+          top: scrollContainerRef.current.scrollHeight,
+          behavior: 'smooth'
+        });
+      }
+    };
+
+    // Scroll immediately
+    scrollToBottom();
+
+    // Set up interval to keep scrolling during streaming with smooth behavior
+    const intervalId = setInterval(scrollToBottom, 300);
+
+    return () => clearInterval(intervalId);
+  }, [messages.length, isUserScrolling]); // Trigger when message count changes or scroll state changes
 
   /**
    * AI-powered button press handler - generates natural user message
@@ -305,10 +388,9 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>((_, r
   };
 
   return (
-    <div className="flex-1 overflow-y-auto" ref={scrollContainerRef}>
-      <div className="px-4 md:px-6 py-4 pb-24">
-        {messages.map((message) => (
-          <React.Fragment key={message.id}>
+    <div className="px-4 md:px-6 py-4 pb-24">
+      {messages.map((message) => (
+        <React.Fragment key={message.id}>
             {/* Text message in bubble - only if message has text content */}
             {message.content && (
               <div 
@@ -365,7 +447,6 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>((_, r
           </div>
         )}
       </div>
-    </div>
   );
 });
 
