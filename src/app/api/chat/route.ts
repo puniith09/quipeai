@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAvailableComponents, getAllComponentSchemas } from '@/rendering-engine';
+import { logger } from '@/lib/logger';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     // Log what components are being provided to the AI
     if (body.responseType === 'components') {
-      console.log('🎨 AI Component Generation:', {
+      logger.debug('🎨', 'AI Component Generation', {
         requested: body.suggestedComponents || 'all',
         available: availableComponents,
         schemasProvided: Object.keys(relevantSchemas)
@@ -224,7 +225,7 @@ Your style should feel like chatting with a friend - engaging, descriptive, and 
     return NextResponse.json(data);
     
   } catch (error) {
-    console.error('Chat API error:', error);
+    logger.error('Chat API error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -11,8 +11,3 @@ export const COMPONENT_REGISTRY: ComponentRegistry = loadComponents();
 export const isValidComponentType = (type: string): boolean => {
   return type in COMPONENT_REGISTRY;
 };
-
-// Get all registered component types
-export const getRegisteredTypes = (): string[] => {
-  return Object.keys(COMPONENT_REGISTRY);
-};

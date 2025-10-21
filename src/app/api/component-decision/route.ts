@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAvailableComponents } from '@/rendering-engine';
+import { logger } from '@/lib/logger';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -116,8 +117,8 @@ When false, suggestedComponents must be []`;
         comp => availableComponents.includes(comp)
       );
       
-    } catch (parseError) {
-      console.error('Failed to parse AI decision:', aiResponse, parseError);
+      } catch (parseError) {
+        logger.error('Failed to parse AI decision:', aiResponse, parseError);
       // Fallback to simple text response
       decision = {
         needsComponent: false,
@@ -126,12 +127,12 @@ When false, suggestedComponents must be []`;
       };
     }
 
-    console.log('🎯 Component Decision:', decision);
+    logger.debug('🎯', 'Component Decision', decision);
 
     return NextResponse.json(decision);
     
   } catch (error) {
-    console.error('Component decision error:', error);
+    logger.error('Component decision error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

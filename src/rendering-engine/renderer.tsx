@@ -3,6 +3,7 @@
 import React from 'react';
 import { COMPONENT_REGISTRY, isValidComponentType } from './registry';
 import type { ComponentNode } from './types';
+import { logger } from '@/lib/logger';
 
 /**
  * Recursively renders components based on JSON structure
@@ -16,7 +17,7 @@ export const renderComponent = (
   // Validate component type
   if (!isValidComponentType(node.type)) {
     const availableTypes = Object.keys(COMPONENT_REGISTRY).join(', ');
-    console.error(`Unknown component type: "${node.type}". Available types: ${availableTypes}`);
+    logger.error(`Unknown component type: "${node.type}". Available types: ${availableTypes}`);
     return (
       <div key={index} className="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
         <strong>Unknown component type: &quot;{node.type}&quot;</strong>
@@ -47,14 +48,4 @@ export const renderComponent = (
       {children}
     </Component>
   );
-};
-
-/**
- * Renders multiple components from an array
- */
-export const renderComponents = (
-  nodes: ComponentNode[],
-  onButtonClick?: (label: string, action?: string) => void
-): React.ReactNode[] => {
-  return nodes.map((node, index) => renderComponent(node, index, onButtonClick));
 };

@@ -1,6 +1,6 @@
 // Rendering Engine - Main exports
 
-export { renderComponent, renderComponents } from './renderer';
+export { renderComponent } from './renderer';
 export { COMPONENT_REGISTRY, isValidComponentType } from './registry';
 export { 
   loadComponents, 

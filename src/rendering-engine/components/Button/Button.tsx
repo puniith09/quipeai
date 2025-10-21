@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { logger } from '@/lib/logger';
 
 interface ButtonProps {
   label: string;
@@ -58,7 +59,7 @@ export const Button: React.FC<ButtonProps> = ({
     if (onClick) {
       onClick();
     } else if (action) {
-      console.log('Button action:', action);
+      logger.log('Button action:', action);
       // You can dispatch custom events or handle actions here
     }
   };

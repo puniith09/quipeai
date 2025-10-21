@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { renderComponent, type ComponentNode } from '@/rendering-engine';
+import { logger } from '@/lib/logger';
 
 interface Message {
   id: string;
@@ -86,7 +87,7 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
           if (!decisionResponse.ok) return null;
 
           const decision = await decisionResponse.json();
-          console.log('🎯 Component Decision:', decision);
+          logger.debug('🎯', 'Component Decision', decision);
 
           if (!decision.needsComponent) return null;
 
@@ -110,17 +111,17 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
           const componentData = await componentResponse.json();
           const componentsJSON = componentData.choices?.[0]?.message?.content;
 
-          console.log('📦 Component Response:', componentData);
-          console.log('📄 Components JSON:', componentsJSON);
+          logger.debug('📦', 'Component Response', componentData);
+          logger.debug('📄', 'Components JSON', componentsJSON);
 
           const parsedComponents = JSON.parse(componentsJSON);
-          console.log('✅ Parsed Components:', parsedComponents);
+          logger.debug('✅', 'Parsed Components', parsedComponents);
 
           return {
             components: Array.isArray(parsedComponents) ? parsedComponents : [parsedComponents]
           };
         } catch (error) {
-          console.error('Component workflow error:', error);
+          logger.error('Component workflow error:', error);
           return null;
         }
       })();
@@ -205,7 +206,7 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
             }
           }
         } catch (streamError) {
-          console.error('Streaming error:', streamError);
+          logger.error('Streaming error:', streamError);
           // Hide loading if there's an error
           setIsLoading(false);
         }
@@ -249,7 +250,7 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
       }
 
     } catch (error) {
-      console.error('Error sending message:', error);
+      logger.error('Error sending message:', error);
       
       const errorMessage: Message = {
         id: `error-${Date.now()}`,
@@ -317,7 +318,7 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
         behavior: 'smooth'
       });
     }
-  }, [messages, isLoading, isLoadingComponent, isUserScrolling]);
+  }, [messages, isLoading, isLoadingComponent, isUserScrolling, scrollContainerRef]);
 
   // Additional scroll effect that runs more frequently during updates
   useEffect(() => {
@@ -340,7 +341,7 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
     const intervalId = setInterval(scrollToBottom, 300);
 
     return () => clearInterval(intervalId);
-  }, [messages.length, isUserScrolling, isLoading, isLoadingComponent]); // Only run when actively loading
+  }, [messages.length, isUserScrolling, isLoading, isLoadingComponent, scrollContainerRef]); // Only run when actively loading
 
   /**
    * AI-powered button press handler - generates natural user message
@@ -370,17 +371,17 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
         const data = await response.json();
         const userMessage = data.message || buttonLabel;
         
-        console.log('🔘 Button Click:', { buttonLabel, generated: userMessage });
+        logger.debug('🔘', 'Button Click', { buttonLabel, generated: userMessage });
         
         // Send the AI-generated natural message
         sendMessage(userMessage);
       } else {
         // Fallback if API fails
-        console.error('Button interpret API failed, using fallback');
+        logger.warn('Button interpret API failed, using fallback');
         sendMessage(buttonLabel);
       }
     } catch (error) {
-      console.error('Error interpreting button click:', error);
+      logger.error('Error interpreting button click:', error);
       // Fallback to button label
       sendMessage(buttonLabel);
     }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -88,7 +89,7 @@ Return ONLY the message text, nothing else.`;
     const data = await response.json();
     const aiMessage = data.choices?.[0]?.message?.content?.trim() || body.buttonLabel;
 
-    console.log('🔘 Button Interpret:', {
+    logger.debug('🔘', 'Button Interpret', {
       button: body.buttonLabel,
       generated: aiMessage
     });
@@ -96,7 +97,7 @@ Return ONLY the message text, nothing else.`;
     return NextResponse.json({ message: aiMessage });
     
   } catch (error) {
-    console.error('Button interpret error:', error);
+    logger.error('Button interpret error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
