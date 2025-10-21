@@ -3,6 +3,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { renderComponent, type ComponentNode } from '@/rendering-engine';
 import { logger } from '@/lib/logger';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 
 interface Message {
   id: string;
@@ -27,6 +29,10 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
   const [isLoadingComponent, setIsLoadingComponent] = useState(false);
   const internalScrollRef = useRef<HTMLDivElement>(null);
   
+  // Auth context
+  const { login, user, isReturningUser, isLoading: authLoading } = useAuth();
+  const { showToast } = useToast();
+  
   // OTP state management
   const [otpState, setOtpState] = useState<{
     stage: 'idle' | 'awaiting_phone' | 'awaiting_otp';
@@ -35,6 +41,13 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
   
   // Use external ref if provided, otherwise use internal ref
   const scrollContainerRef = externalScrollRef || internalScrollRef;
+
+  // Show welcome back toast for returning users
+  useEffect(() => {
+    if (!authLoading && isReturningUser && user) {
+      showToast(`Welcome back, ${user.phoneNumber}!`, 'success');
+    }
+  }, [authLoading, isReturningUser, user, showToast]);
 
   const sendMessage = async (messageContent: string) => {
     if (!messageContent.trim() || isLoading) return;
@@ -417,6 +430,14 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
           // Update OTP state
           setOtpState({ stage: 'awaiting_otp', phoneNumber: value });
           
+          // Show success toast
+          showToast(
+            <>
+              <span style={{ fontWeight: 700 }}>Code sent!</span> Check your phone for the OTP.
+            </>,
+            'success'
+          );
+          
           // Add success message
           const successMessage: Message = {
             id: `assistant-${Date.now()}`,
@@ -449,6 +470,9 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
           setMessages(prev => [...prev, otpInputMessage]);
           
         } else {
+          // Show error toast
+          showToast(data.error || 'Failed to send OTP. Please try again.', 'error');
+          
           // Show error message
           const errorMessage: Message = {
             id: `assistant-${Date.now()}`,
@@ -461,6 +485,8 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
         }
       } catch (error) {
         logger.error('Error sending OTP:', error);
+        showToast('Error sending OTP. Please try again.', 'error');
+        
         const errorMessage: Message = {
           id: `assistant-${Date.now()}`,
           type: 'assistant',
@@ -490,22 +516,34 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
           // Reset OTP state
           setOtpState({ stage: 'idle' });
           
+          // Store authentication data
+          if (data.token && data.user) {
+            login(data.token, data.user);
+            logger.info('User authenticated:', data.user);
+            
+            // Show success toast
+            showToast(
+              <>
+                <span style={{ fontWeight: 700 }}>Welcome back!</span> You are now signed in.
+              </>,
+              'success'
+            );
+          }
+          
           // Add success message
           const successMessage: Message = {
             id: `assistant-${Date.now()}`,
             type: 'assistant',
-            content: data.message || 'Phone number verified successfully! You are now signed in.',
+            content: data.message || `You are now signed in as ${data.user?.phoneNumber || 'user'}.`,
             timestamp: new Date(),
             messageType: 'text',
           };
           setMessages(prev => [...prev, successMessage]);
           
-          // Here you can store auth token, update global state, etc.
-          if (data.token) {
-            localStorage.setItem('auth_token', data.token);
-          }
-          
         } else {
+          // Show error toast
+          showToast(data.error || 'Invalid OTP. Please try again.', 'error');
+          
           // Show error message but keep awaiting_otp state
           const errorMessage: Message = {
             id: `assistant-${Date.now()}`,
@@ -518,6 +556,8 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
         }
       } catch (error) {
         logger.error('Error verifying OTP:', error);
+        showToast('Error verifying OTP. Please try again.', 'error');
+        
         const errorMessage: Message = {
           id: `assistant-${Date.now()}`,
           type: 'assistant',

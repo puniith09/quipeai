@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Prelude from '@prelude.so/sdk';
 import { logger } from '@/lib/logger';
+import { generateToken, generateUserId } from '@/lib/auth/jwt';
+import { createOrUpdateUser } from '@/lib/auth/user-store';
 
 interface VerifyOTPRequest {
   phoneNumber: string;
@@ -67,18 +69,38 @@ export async function POST(request: NextRequest) {
     logger.info('OTP verification result:', check.status);
 
     if (check.status === 'success') {
-      // Here you can:
-      // 1. Create a session/JWT token
-      // 2. Store user in database
-      // 3. Set authentication cookies
+      const verificationId = check.id || `verify_${Date.now()}`;
+      
+      // 1. Generate user ID from phone number
+      const userId = generateUserId(phoneNumber);
+      
+      // 2. Create or update user in store
+      const user = await createOrUpdateUser(userId, phoneNumber, verificationId);
+      
+      // 3. Generate JWT token
+      const token = await generateToken({
+        userId: user.id,
+        phoneNumber: user.phoneNumber,
+        verificationId: verificationId,
+      });
+      
+      logger.info('User authenticated successfully:', {
+        userId: user.id,
+        sessionCount: user.sessionCount,
+      });
       
       return NextResponse.json({
         success: true,
         verified: true,
-        verificationId: check.id,
+        verificationId: verificationId,
         message: 'Phone number verified successfully!',
-        // You can add user token/session here
-        // token: 'generated-jwt-token'
+        token,
+        user: {
+          id: user.id,
+          phoneNumber: user.phoneNumber,
+          sessionCount: user.sessionCount,
+          lastLogin: user.lastLogin.toISOString(),
+        },
       });
     } else if (check.status === 'expired_or_not_found') {
       return NextResponse.json({
