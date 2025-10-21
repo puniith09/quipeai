@@ -57,6 +57,8 @@ export async function POST(request: NextRequest) {
 
 Available: ${availableComponents.join(', ')}
 
+SPECIAL: For authentication/sign-in/login requests, use "textinput" for phone number entry.
+
 Return JSON:
 {
   "needsComponent": true/false,
@@ -64,7 +66,10 @@ Return JSON:
   "suggestedComponents": ["component1", "component2"]
 }
 
-Use needsComponent: true for anything that can be visualized (lists, items, options, data).
+Use needsComponent: true for:
+- Authentication requests (sign in, login, verify) → use "textinput"
+- Anything that can be visualized (lists, items, options, data)
+
 Use needsComponent: false ONLY for pure greetings or clarifying questions.
 When true, suggest appropriate components from: ${availableComponents.join(', ')}
 When false, suggestedComponents must be []`;

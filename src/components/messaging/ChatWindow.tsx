@@ -27,6 +27,12 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
   const [isLoadingComponent, setIsLoadingComponent] = useState(false);
   const internalScrollRef = useRef<HTMLDivElement>(null);
   
+  // OTP state management
+  const [otpState, setOtpState] = useState<{
+    stage: 'idle' | 'awaiting_phone' | 'awaiting_otp';
+    phoneNumber?: string;
+  }>({ stage: 'idle' });
+  
   // Use external ref if provided, otherwise use internal ref
   const scrollContainerRef = externalScrollRef || internalScrollRef;
 
@@ -387,6 +393,146 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
     }
   };
 
+  /**
+   * Handle TextInput submission for OTP flows
+   */
+  const handleTextInputSubmit = async (value: string, action?: string) => {
+    logger.debug('📝', 'TextInput Submit', { value, action, otpState });
+    
+    // Check if this is an OTP flow based on action
+    if (action === 'send_otp' || otpState.stage === 'awaiting_phone') {
+      // Phone number submission
+      try {
+        const response = await fetch('/api/auth/send-otp', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ phoneNumber: value })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          // Update OTP state
+          setOtpState({ stage: 'awaiting_otp', phoneNumber: value });
+          
+          // Add success message
+          const successMessage: Message = {
+            id: `assistant-${Date.now()}`,
+            type: 'assistant',
+            content: data.message || `OTP sent to ${value}. Please enter the code below.`,
+            timestamp: new Date(),
+            messageType: 'text',
+          };
+          setMessages(prev => [...prev, successMessage]);
+          
+          // Add OTP input component
+          const otpInputMessage: Message = {
+            id: `component-${Date.now()}`,
+            type: 'assistant',
+            content: '',
+            components: [{
+              type: 'textinput',
+              props: {
+                label: 'Enter OTP Code',
+                placeholder: 'Enter 6-digit code',
+                type: 'text',
+                action: 'verify_otp',
+                submitLabel: 'Verify',
+                maxLength: 6,
+              }
+            }],
+            timestamp: new Date(),
+            messageType: 'component',
+          };
+          setMessages(prev => [...prev, otpInputMessage]);
+          
+        } else {
+          // Show error message
+          const errorMessage: Message = {
+            id: `assistant-${Date.now()}`,
+            type: 'assistant',
+            content: data.error || 'Failed to send OTP. Please try again.',
+            timestamp: new Date(),
+            messageType: 'text',
+          };
+          setMessages(prev => [...prev, errorMessage]);
+        }
+      } catch (error) {
+        logger.error('Error sending OTP:', error);
+        const errorMessage: Message = {
+          id: `assistant-${Date.now()}`,
+          type: 'assistant',
+          content: 'Error sending OTP. Please try again.',
+          timestamp: new Date(),
+          messageType: 'text',
+        };
+        setMessages(prev => [...prev, errorMessage]);
+      }
+    } else if (action === 'verify_otp' || otpState.stage === 'awaiting_otp') {
+      // OTP verification
+      try {
+        const response = await fetch('/api/auth/verify-otp', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            phoneNumber: otpState.phoneNumber,
+            code: value
+          })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok && data.verified) {
+          // Reset OTP state
+          setOtpState({ stage: 'idle' });
+          
+          // Add success message
+          const successMessage: Message = {
+            id: `assistant-${Date.now()}`,
+            type: 'assistant',
+            content: data.message || 'Phone number verified successfully! You are now signed in.',
+            timestamp: new Date(),
+            messageType: 'text',
+          };
+          setMessages(prev => [...prev, successMessage]);
+          
+          // Here you can store auth token, update global state, etc.
+          if (data.token) {
+            localStorage.setItem('auth_token', data.token);
+          }
+          
+        } else {
+          // Show error message but keep awaiting_otp state
+          const errorMessage: Message = {
+            id: `assistant-${Date.now()}`,
+            type: 'assistant',
+            content: data.error || 'Invalid OTP. Please try again.',
+            timestamp: new Date(),
+            messageType: 'text',
+          };
+          setMessages(prev => [...prev, errorMessage]);
+        }
+      } catch (error) {
+        logger.error('Error verifying OTP:', error);
+        const errorMessage: Message = {
+          id: `assistant-${Date.now()}`,
+          type: 'assistant',
+          content: 'Error verifying OTP. Please try again.',
+          timestamp: new Date(),
+          messageType: 'text',
+        };
+        setMessages(prev => [...prev, errorMessage]);
+      }
+    } else {
+      // For other text inputs, just send as a message
+      sendMessage(value);
+    }
+  };
+
   return (
     <div className="px-4 md:px-6 py-4 pb-24">
       {messages.map((message) => (
@@ -417,7 +563,7 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
               <div className="my-3 space-y-2">
                 {message.components.map((component, index) => (
                   <div key={index}>
-                    {renderComponent(component, index, handleComponentButtonPress)}
+                    {renderComponent(component, index, handleComponentButtonPress, handleTextInputSubmit)}
                   </div>
                 ))}
               </div>

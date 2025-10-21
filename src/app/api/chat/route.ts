@@ -81,6 +81,12 @@ RENDERING CONTEXT: Components render on a BLACK background (#000000). Choose col
 
 CRITICAL: You can ONLY use these component types: ${availableComponents.join(', ')}
 
+AUTHENTICATION FLOWS:
+- For sign-in/login requests: Generate a textinput component with action="send_otp"
+- TextInput props for phone: type="tel", label="Enter Phone Number", placeholder="+1234567890", action="send_otp", submitLabel="Send Code"
+- The system will automatically handle OTP sending and verification
+- DO NOT generate OTP input - system handles it automatically after phone submission
+
 Rules:
 - ONLY use component types from: ${availableComponents.join(', ')}
 - Study the schemas below for EXACT format and available props
