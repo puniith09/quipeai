@@ -1,0 +1,16 @@
+{
+  "type": "list",
+  "props": {
+    "items": [
+      "First item in the list",
+      "Second item in the list",
+      "Third item in the list"
+    ],
+    "variant": "bullets",
+    "color": "#374151",
+    "fontSize": "14px",
+    "fontWeight": "normal",
+    "spacing": "8px",
+    "align": "left"
+  }
+}

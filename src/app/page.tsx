@@ -1,103 +1,147 @@
-import Image from "next/image";
+'use client';
+
+import { useRef, useState, useEffect, useCallback } from 'react';
+import { Header } from '@/components/header';
+import { Suggestions } from '@/components/suggestions';
+import { Messaging } from '@/components/messaging';
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const chatWindowRef = useRef<{ sendMessage: (message: string) => void } | null>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [dragStartY, setDragStartY] = useState(0);
+  const [currentTranslate, setCurrentTranslate] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [hasMessages, setHasMessages] = useState(false);
+  const [isAtTop, setIsAtTop] = useState(true);
+  const [viewportHeight, setViewportHeight] = useState('100vh');
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+  // Set actual viewport height for mobile browsers
+  useEffect(() => {
+    const setVH = () => {
+      const vh = window.innerHeight;
+      document.documentElement.style.setProperty('--app-height', `${vh}px`);
+      setViewportHeight(`${vh}px`);
+    };
+
+    setVH();
+    
+    // Update on resize but not on scroll (which changes innerHeight on mobile)
+    let resizeTimer: NodeJS.Timeout;
+    const handleResize = () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(setVH, 100);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(resizeTimer);
+    };
+  }, []);
+
+  const handleSettingsClick = useCallback(() => {
+    // TODO: Implement settings functionality
+  }, []);
+
+  const handleSearchClick = useCallback(() => {
+    // TODO: Implement search functionality
+  }, []);
+
+  const handleSendMessage = useCallback((message: string) => {
+    // Send message through the ChatWindow
+    chatWindowRef.current?.sendMessage(message);
+    
+    // Auto-expand on first message
+    if (!hasMessages) {
+      setHasMessages(true);
+      setIsExpanded(true);
+    }
+  }, [hasMessages]);
+
+  const handleChatScroll = useCallback(() => {
+    if (chatScrollRef.current) {
+      const { scrollTop } = chatScrollRef.current;
+      setIsAtTop(scrollTop <= 5); // Consider at top if within 5px
+    }
+  }, []);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    setDragStartY(e.touches[0].clientY);
+    setIsDragging(true);
+    setCurrentTranslate(0);
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isDragging) return;
+    
+    const currentY = e.touches[0].clientY;
+    const diff = currentY - dragStartY; // Positive when dragging down, negative when dragging up
+    
+    // Calculate max drag distance (200px = distance between collapsed and expanded)
+    const maxDrag = 200;
+    
+    // Check if we should allow header swipe
+    const shouldAllowSwipe = !hasMessages || (isAtTop && diff > 0) || (!isExpanded && diff < 0);
+    
+    if (!shouldAllowSwipe) return;
+    
+    // When expanded: allow dragging down (positive diff)
+    // When collapsed: allow dragging up (negative diff)
+    if (isExpanded && diff > 0 && diff <= maxDrag) {
+      setCurrentTranslate(diff);
+      e.preventDefault(); // Prevent scroll when swiping header
+    } else if (!isExpanded && diff < 0 && diff >= -maxDrag) {
+      setCurrentTranslate(diff);
+      e.preventDefault();
+    }
+  }, [isDragging, dragStartY, hasMessages, isAtTop, isExpanded]);
+
+  const handleTouchEnd = useCallback(() => {
+    setIsDragging(false);
+    // If dragged more than 50px, toggle state
+    if (Math.abs(currentTranslate) > 50) {
+      if (currentTranslate < 0) {
+        setIsExpanded(true); // Dragged up
+      } else {
+        setIsExpanded(false); // Dragged down
+      }
+    }
+    setCurrentTranslate(0);
+  }, [currentTranslate]);
+
+  return (
+    <div 
+      className="flex flex-col bg-white overflow-hidden relative" 
+      style={{ 
+        height: viewportHeight,
+        touchAction: 'none',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+      }}
+    >
+      {/* Header Section */}
+      <Header onSettingsClick={handleSettingsClick} />
+
+      {/* Suggestions Section */}
+      <Suggestions announcementMessage="Indian Railways extends Covid guidelines, doing thermal screening of passengers" />
+
+      {/* Messaging Section */}
+      <Messaging
+        isExpanded={isExpanded}
+        isDragging={isDragging}
+        currentTranslate={currentTranslate}
+        hasMessages={hasMessages}
+        isAtTop={isAtTop}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onChatScroll={handleChatScroll}
+        onSendMessage={handleSendMessage}
+        onSearchClick={handleSearchClick}
+        chatScrollRef={chatScrollRef}
+        chatWindowRef={chatWindowRef}
+      />
     </div>
   );
 }
