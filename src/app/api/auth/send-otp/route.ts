@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Prelude from '@prelude.so/sdk';
 import { logger } from '@/lib/logger';
+import { rateLimiter, RATE_LIMITS, formatTimeRemaining } from '@/lib/rate-limiter';
 
 interface SendOTPRequest {
   phoneNumber: string;
@@ -38,6 +39,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Phone number must include country code (e.g., +1234567890)' },
         { status: 400 }
+      );
+    }
+
+    // Check rate limit: 3 OTP requests per phone per hour
+    const rateLimitKey = `otp:send:${phoneNumber}`;
+    const isAllowed = rateLimiter.check(
+      rateLimitKey,
+      RATE_LIMITS.OTP_SEND.maxRequests,
+      RATE_LIMITS.OTP_SEND.windowMs
+    );
+
+    if (!isAllowed) {
+      const resetTime = rateLimiter.getResetTime(rateLimitKey);
+      const message = RATE_LIMITS.OTP_SEND.message.replace(
+        '{time}',
+        formatTimeRemaining(resetTime)
+      );
+      
+      logger.warn(`Rate limit exceeded for phone: ${phoneNumber}`);
+      
+      return NextResponse.json(
+        { 
+          error: message,
+          retryAfter: resetTime,
+        },
+        { status: 429 }
       );
     }
 
