@@ -1,98 +1,132 @@
 /**
- * User Store - Simple in-memory user storage
- * In production, replace this with a database (PostgreSQL, MongoDB, etc.)
+ * User Store - Database-backed user storage using Prisma + PostgreSQL
  */
 
 import { logger } from '@/lib/logger';
+import { prisma } from '@/lib/prisma';
 
 export interface User {
   id: string;
   phoneNumber: string;
-  verificationId: string;
   createdAt: Date;
   lastLogin: Date;
   sessionCount: number;
 }
 
-// In-memory store (replace with database in production)
-const userStore = new Map<string, User>();
-
 /**
- * Create or update a user in the store
+ * Create or update a user in the database
  */
 export async function createOrUpdateUser(
   userId: string,
   phoneNumber: string,
   verificationId: string
 ): Promise<User> {
-  const existingUser = userStore.get(userId);
-  
-  if (existingUser) {
-    // Update existing user
-    existingUser.lastLogin = new Date();
-    existingUser.sessionCount += 1;
-    existingUser.verificationId = verificationId;
+  try {
+    const existingUser = await prisma.user.findUnique({
+      where: { phoneNumber },
+    });
     
-    logger.info('User updated:', userId);
-    return existingUser;
-  } else {
-    // Create new user
-    const newUser: User = {
-      id: userId,
-      phoneNumber,
-      verificationId,
-      createdAt: new Date(),
-      lastLogin: new Date(),
-      sessionCount: 1,
-    };
-    
-    userStore.set(userId, newUser);
-    logger.info('New user created:', userId);
-    return newUser;
-  }
-}
-
-/**
- * Get user by ID
- */
-export async function getUserById(userId: string): Promise<User | null> {
-  const user = userStore.get(userId);
-  return user || null;
-}
-
-/**
- * Get user by phone number
- */
-export async function getUserByPhone(phoneNumber: string): Promise<User | null> {
-  for (const user of userStore.values()) {
-    if (user.phoneNumber === phoneNumber) {
-      return user;
+    if (existingUser) {
+      const updatedUser = await prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          lastLogin: new Date(),
+          sessionCount: { increment: 1 },
+        },
+      });
+      
+      logger.info('User updated:', updatedUser.id);
+      return updatedUser;
+    } else {
+      const newUser = await prisma.user.create({
+        data: {
+          id: userId,
+          phoneNumber,
+          sessionCount: 1,
+          lastLogin: new Date(),
+        },
+      });
+      
+      logger.info('New user created:', newUser.id);
+      return newUser;
     }
+  } catch (error) {
+    logger.error('Error in createOrUpdateUser:', error);
+    throw error;
   }
-  return null;
 }
 
-/**
- * Delete user (for testing/cleanup)
- */
+export async function getUserById(userId: string): Promise<User | null> {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+    return user;
+  } catch (error) {
+    logger.error('Error in getUserById:', error);
+    return null;
+  }
+}
+
+export async function getUserByPhone(phoneNumber: string): Promise<User | null> {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { phoneNumber },
+    });
+    return user;
+  } catch (error) {
+    logger.error('Error in getUserByPhone:', error);
+    return null;
+  }
+}
+
 export async function deleteUser(userId: string): Promise<boolean> {
-  const deleted = userStore.delete(userId);
-  if (deleted) {
+  try {
+    await prisma.user.delete({
+      where: { id: userId },
+    });
     logger.info('User deleted:', userId);
+    return true;
+  } catch (error) {
+    logger.error('Error deleting user:', error);
+    return false;
   }
-  return deleted;
 }
 
-/**
- * Get all users (admin function)
- */
 export async function getAllUsers(): Promise<User[]> {
-  return Array.from(userStore.values());
+  try {
+    return await prisma.user.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+  } catch (error) {
+    logger.error('Error getting all users:', error);
+    return [];
+  }
 }
 
-/**
- * Get user count
- */
-export function getUserCount(): number {
-  return userStore.size;
+export async function getUserCount(): Promise<number> {
+  try {
+    return await prisma.user.count();
+  } catch (error) {
+    logger.error('Error getting user count:', error);
+    return 0;
+  }
+}
+
+export async function getActiveUsers(days: number = 7): Promise<number> {
+  try {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    
+    return await prisma.user.count({
+      where: {
+        lastLogin: {
+          gte: cutoffDate,
+        },
+      },
+    });
+  } catch (error) {
+    logger.error('Error getting active users:', error);
+    return 0;
+  }
 }

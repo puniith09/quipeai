@@ -4,19 +4,23 @@
   "private": true,
   "scripts": {
     "dev": "npm run generate:components && next dev",
-    "build": "npm run generate:components && next build",
+    "build": "npm run generate:components && prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "generate:components": "node scripts/generate-components.js"
+    "generate:components": "node scripts/generate-components.js",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@newrelic/browser-agent": "^1.299.0",
     "@prelude.so/sdk": "^0.8.0",
+    "@prisma/client": "^6.18.0",
     "@types/cookie": "^0.6.0",
     "cookie": "^1.0.2",
     "jose": "^6.1.0",
     "next": "15.5.4",
     "next-pwa": "^5.6.0",
+    "pg": "^8.16.3",
+    "prisma": "^6.18.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "workbox-webpack-plugin": "^7.3.0"
