@@ -23,6 +23,7 @@
     "prisma": "^6.18.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "supermemory": "^3.4.0",
     "workbox-webpack-plugin": "^7.3.0"
   },
   "devDependencies": {
