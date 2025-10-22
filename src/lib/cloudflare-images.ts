@@ -201,7 +201,7 @@ export async function listImages(
       return [];
     }
 
-    return data.result.images.map((img: any) => {
+    return data.result.images.map((img: { id: string; filename: string; uploaded: string }) => {
       const baseUrl = `https://imagedelivery.net/${CLOUDFLARE_ACCOUNT_ID}/${img.id}`;
       return {
         id: img.id,
@@ -297,7 +297,7 @@ export function validateImageFile(file: File): {
   return { valid: true };
 }
 
-export default {
+const cloudflareImages = {
   uploadImage,
   deleteImage,
   getImageDetails,
@@ -305,3 +305,5 @@ export default {
   getOptimizedImageUrl,
   validateImageFile,
 };
+
+export default cloudflareImages;

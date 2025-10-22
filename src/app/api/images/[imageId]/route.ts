@@ -9,10 +9,10 @@ import { logger } from '@/lib/logger';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { imageId: string } }
+  { params }: { params: Promise<{ imageId: string }> }
 ) {
   try {
-    const { imageId } = params;
+    const { imageId } = await params;
 
     const imageData = await getImageDetails(imageId);
 
@@ -45,10 +45,10 @@ export async function GET(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { imageId: string } }
+  { params }: { params: Promise<{ imageId: string }> }
 ) {
   try {
-    const { imageId } = params;
+    const { imageId } = await params;
 
     logger.info('Deleting image from Cloudflare', { imageId });
 
