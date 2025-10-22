@@ -3,6 +3,7 @@ import Prelude from '@prelude.so/sdk';
 import { logger } from '@/lib/logger';
 import { generateToken, generateUserId } from '@/lib/auth/jwt';
 import { createOrUpdateUser } from '@/lib/auth/user-store';
+import { setAuthCookieInResponse } from '@/lib/auth/cookies';
 
 interface VerifyOTPRequest {
   phoneNumber: string;
@@ -77,24 +78,24 @@ export async function POST(request: NextRequest) {
       // 2. Create or update user in store
       const user = await createOrUpdateUser(userId, phoneNumber, verificationId);
       
-      // 3. Generate JWT token
+      // 3. Generate JWT token (30 days expiry)
       const token = await generateToken({
         userId: user.id,
         phoneNumber: user.phoneNumber,
         verificationId: verificationId,
-      });
+      }, '30d'); // 30 days
       
       logger.info('User authenticated successfully:', {
         userId: user.id,
         sessionCount: user.sessionCount,
       });
       
-      return NextResponse.json({
+      // Create response with user data
+      const response = NextResponse.json({
         success: true,
         verified: true,
         verificationId: verificationId,
         message: 'Phone number verified successfully!',
-        token,
         user: {
           id: user.id,
           phoneNumber: user.phoneNumber,
@@ -102,6 +103,11 @@ export async function POST(request: NextRequest) {
           lastLogin: user.lastLogin.toISOString(),
         },
       });
+      
+      // Set authentication token as HttpOnly cookie
+      setAuthCookieInResponse(response, token);
+      
+      return response;
     } else if (check.status === 'expired_or_not_found') {
       return NextResponse.json({
         success: false,

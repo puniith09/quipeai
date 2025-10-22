@@ -516,9 +516,9 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
           // Reset OTP state
           setOtpState({ stage: 'idle' });
           
-          // Store authentication data
-          if (data.token && data.user) {
-            login(data.token, data.user);
+          // Store authentication data (cookie is set automatically by server)
+          if (data.user) {
+            login(data.user);
             logger.info('User authenticated:', data.user);
             
             // Show success toast

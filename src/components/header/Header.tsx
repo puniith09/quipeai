@@ -13,10 +13,10 @@ export const Header: React.FC<HeaderProps> = ({ onSettingsClick }) => {
   const { user, isAuthenticated, logout } = useAuth();
   const { showToast } = useToast();
   
-  const handleSettingsClick = () => {
+  const handleSettingsClick = async () => {
     if (isAuthenticated) {
       // Log out the user
-      logout();
+      await logout();
       showToast(
         <>
           <span style={{ fontWeight: 700 }}>Signed out!</span> You have been logged out successfully.

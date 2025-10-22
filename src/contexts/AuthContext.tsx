@@ -12,63 +12,66 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   isReturningUser: boolean;
-  login: (token: string, user: User) => void;
-  logout: () => void;
+  login: (user: User) => void;
+  logout: () => Promise<void>;
   updateUser: (user: User) => void;
+  checkAuth: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isReturningUser, setIsReturningUser] = useState(false);
 
-  // Load auth state from localStorage on mount
-  useEffect(() => {
+  const checkAuth = useCallback(async () => {
     try {
-      const storedToken = localStorage.getItem('auth_token');
-      const storedUser = localStorage.getItem('auth_user');
-
-      if (storedToken && storedUser) {
-        setToken(storedToken);
-        setUser(JSON.parse(storedUser));
-        setIsReturningUser(true); // Flag that this is a returning user
-        logger.info('Auth state restored from localStorage');
+      const response = await fetch('/api/auth/me', {
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.authenticated && data.user) {
+          setUser(data.user);
+          setIsReturningUser(true);
+          logger.info('Auth state restored from cookie');
+        }
       }
     } catch (error) {
-      logger.error('Error loading auth state:', error);
-      // Clear corrupted data
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('auth_user');
+      logger.error('Error checking auth status:', error);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const login = useCallback((newToken: string, newUser: User) => {
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  const login = useCallback((newUser: User) => {
     try {
-      setToken(newToken);
       setUser(newUser);
-      localStorage.setItem('auth_token', newToken);
-      localStorage.setItem('auth_user', JSON.stringify(newUser));
+      setIsReturningUser(false);
       logger.info('User logged in:', newUser.id);
     } catch (error) {
       logger.error('Error during login:', error);
     }
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     try {
-      setToken(null);
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      
       setUser(null);
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('auth_user');
+      setIsReturningUser(false);
       logger.info('User logged out');
     } catch (error) {
       logger.error('Error during logout:', error);
@@ -78,7 +81,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateUser = useCallback((updatedUser: User) => {
     try {
       setUser(updatedUser);
-      localStorage.setItem('auth_user', JSON.stringify(updatedUser));
       logger.info('User data updated');
     } catch (error) {
       logger.error('Error updating user:', error);
@@ -87,13 +89,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value: AuthContextType = {
     user,
-    token,
-    isAuthenticated: !!token && !!user,
+    isAuthenticated: !!user,
     isLoading,
     isReturningUser,
     login,
     logout,
     updateUser,
+    checkAuth,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
