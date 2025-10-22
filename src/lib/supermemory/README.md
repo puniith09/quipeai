@@ -101,7 +101,9 @@ Metadata is searchable and filterable:
 
 ## Testing
 
-Run the unit tests:
+### Unit Tests
+
+Run the comprehensive unit tests:
 
 ```bash
 # With environment variables
@@ -112,11 +114,25 @@ npx tsx src/lib/supermemory/test-client.ts
 ```
 
 Expected output:
-- ✅ Add memory (returns ID and status)
-- ✅ Search memories (may be 0 initially due to async processing)
-- ✅ List memories (with pagination)
-- ✅ Delete memory (may fail if still queuing - expected)
-- ✅ Bulk delete by tags
+- ✅ Zone utilities: 9/9 tests passed
+- ✅ Client functions: 5/5 tests passed
+
+### Salon Scenario Test
+
+Run the complete end-to-end salon discovery scenario:
+
+```bash
+SUPERMEMORY_API_KEY=your_key npx tsx src/lib/supermemory/test-salon-scenario.ts
+```
+
+This test simulates:
+1. Business owner onboards "Amazing Hair Studio" in Banjara Hills
+2. User Sarah searches for "affordable salon haircut"
+3. System resolves zones and performs spatiotemporal search
+4. User views and books appointment
+5. Interactions tracked in user context
+6. Zone expires after 6 hours, cleanup runs
+7. User data persists (never expires)
 
 ## Important Notes
 
