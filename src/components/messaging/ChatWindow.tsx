@@ -110,14 +110,59 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
 
           if (!decision.needsComponent) return null;
 
-          // Step 2: Generate component (if needed) - Don't show loading yet
+          // Step 2: Get real data directly from /api/search
+          // Get user location (TODO: get from browser geolocation)
+          const userLocation = { lat: 17.4326, lng: 78.4487 }; // Default: Banjara Hills
+          
+          // Use extracted search query and business type from decision
+          const searchQuery = decision.searchQuery || messageContent.trim();
+          const businessType = decision.businessType;
+          
+          // Call search API directly with type filter
+          const searchParams = new URLSearchParams({
+            q: searchQuery,
+            lat: userLocation.lat.toString(),
+            lng: userLocation.lng.toString(),
+            limit: '10',
+          });
+
+          // Add business type filter to prevent irrelevant results
+          if (businessType) {
+            searchParams.append('type', businessType);
+          }
+
+          const searchResponse = await fetch(`/api/search?${searchParams}`);
+          
+          if (!searchResponse.ok) return null;
+
+          const searchData = await searchResponse.json();
+          
+          logger.debug('�', 'Search Results', searchData);
+          
+          // Log Supermemory data as JSON
+          if (searchData.debug?.supermemoryRawResults) {
+            console.log('📦 SUPERMEMORY JSON RESPONSE:');
+            console.log(JSON.stringify(searchData.debug.supermemoryRawResults, null, 2));
+          }
+
+          // Step 3: Generate components with real Supermemory data
           const componentResponse = await fetch('/api/chat', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              messages: conversationHistory,
+              messages: [
+                ...conversationHistory,
+                {
+                  role: 'assistant',
+                  content: `Found ${searchData.count} businesses: ${JSON.stringify(searchData.results)}`
+                },
+                {
+                  role: 'user',
+                  content: 'Generate UI components to display these businesses as cards. Use the actual data from the search results - names, addresses, prices, ratings, services.'
+                }
+              ],
               temperature: 0.7,
               max_tokens: 1500,
               responseType: 'components',

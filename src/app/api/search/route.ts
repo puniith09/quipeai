@@ -147,6 +147,7 @@ async function handleSearch(searchRequest: SearchRequest): Promise<NextResponse>
     includeNeighbors = false,
   } = searchRequest;
 
+  console.log('🚀 SEARCH API CALLED', { query, location, userId, filters, limit });
   logger.info('Search request', { query, location, userId, filters, limit });
 
   try {
@@ -234,6 +235,13 @@ async function handleSearch(searchRequest: SearchRequest): Promise<NextResponse>
     }
 
     // Step 3: Search in Supermemory
+    console.log('🔍 Calling Supermemory API:', {
+      query,
+      zones: zonesToSearch,
+      filters: supermemoryFilters.AND.length > 0 ? supermemoryFilters : undefined,
+      limit
+    });
+
     const results = await searchMemories(
       query,
       zonesToSearch,
@@ -241,10 +249,11 @@ async function handleSearch(searchRequest: SearchRequest): Promise<NextResponse>
       limit
     );
 
-    logger.info('Search completed', { 
+    console.log('📦 Supermemory API Response:', JSON.stringify({ 
       resultsCount: results.length,
-      zones: zonesToSearch.length 
-    });
+      zones: zonesToSearch.length,
+      rawResults: results // Full response from Supermemory
+    }, null, 2));
 
     // Step 4: Transform results
     const transformedResults: SearchResult[] = results.map((result) => ({
@@ -289,6 +298,11 @@ async function handleSearch(searchRequest: SearchRequest): Promise<NextResponse>
       results: filteredResults,
       count: filteredResults.length,
       timestamp: new Date().toISOString(),
+      // Debug: Include raw Supermemory response
+      debug: {
+        supermemoryRawResults: results,
+        supermemoryResultsCount: results.length,
+      }
     });
 
   } catch (error) {
