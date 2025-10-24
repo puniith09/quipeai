@@ -63,6 +63,7 @@ export interface UserInteraction {
     lat: number;
     lng: number;
   };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metadata?: Record<string, any>;
 }
 
@@ -371,9 +372,11 @@ export async function resolveUserZone(
  * @param limit - Max interactions to return
  * @returns Array of interaction memories
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getUserInteractionHistory(
   userId: string,
   limit: number = 50
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<any[]> {
   const userTag = getUserContainerTag(userId);
 

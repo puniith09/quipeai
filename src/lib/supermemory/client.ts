@@ -104,6 +104,7 @@ export async function searchMemories(
   containerTags?: string[],
   filters?: SearchFilters,
   limit: number = 10
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<any[]> {
   try {
     logger.info('Searching memories', { query, containerTags, limit });
@@ -111,6 +112,7 @@ export async function searchMemories(
     const result = await supermemory.search.documents({
       q: query,
       containerTags: containerTags || [],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       filters: filters as any, // SDK expects Or | And type
       limit,
     });
@@ -139,6 +141,7 @@ export async function listMemories(
   page: number = 1,
   limit: number = 100
 ): Promise<{
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   memories: any[];
   pagination: {
     currentPage: number;
@@ -152,6 +155,7 @@ export async function listMemories(
 
     const result = await supermemory.memories.list({
       containerTags: containerTags || [],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       filters: filters as any, // SDK expects Or | And type
       page,
       limit,
@@ -287,6 +291,7 @@ export async function updateMemory(
  * @param memoryId - Memory ID
  * @returns Memory details
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getMemory(memoryId: string): Promise<any> {
   try {
     logger.info('Getting memory', { memoryId });

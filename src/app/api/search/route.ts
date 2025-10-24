@@ -7,15 +7,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
-import { searchMemories } from '@/lib/supermemory/client';
+import { searchMemories, type SearchFilters } from '@/lib/supermemory/client';
 import {
   getZoneForCoordinates,
   getNeighboringZones,
   normalizeToGridCenter,
   calculateAdaptiveGridSize,
-  type GridSize,
 } from '@/lib/supermemory/zone-utils';
-import { resolveUserZone } from '@/lib/supermemory/user-context';
 
 /**
  * Search request interface
@@ -191,16 +189,16 @@ async function handleSearch(searchRequest: SearchRequest): Promise<NextResponse>
     }
 
     // Step 2: Build Supermemory filters
-    const supermemoryFilters: any = { AND: [] };
+    const supermemoryFilters: SearchFilters = { AND: [] };
 
-    if (filters?.type) {
+    if (filters?.type && supermemoryFilters.AND) {
       supermemoryFilters.AND.push({
         key: 'type',
         value: filters.type,
       });
     }
 
-    if (filters?.maxPrice !== undefined) {
+    if (filters?.maxPrice !== undefined && supermemoryFilters.AND) {
       supermemoryFilters.AND.push({
         key: 'price',
         value: filters.maxPrice.toString(),
@@ -209,7 +207,7 @@ async function handleSearch(searchRequest: SearchRequest): Promise<NextResponse>
       });
     }
 
-    if (filters?.minPrice !== undefined) {
+    if (filters?.minPrice !== undefined && supermemoryFilters.AND) {
       supermemoryFilters.AND.push({
         key: 'price',
         value: filters.minPrice.toString(),
@@ -218,7 +216,7 @@ async function handleSearch(searchRequest: SearchRequest): Promise<NextResponse>
       });
     }
 
-    if (filters?.minRating !== undefined) {
+    if (filters?.minRating !== undefined && supermemoryFilters.AND) {
       supermemoryFilters.AND.push({
         key: 'rating',
         value: filters.minRating.toString(),
@@ -227,7 +225,7 @@ async function handleSearch(searchRequest: SearchRequest): Promise<NextResponse>
       });
     }
 
-    if (filters?.verified) {
+    if (filters?.verified && supermemoryFilters.AND) {
       supermemoryFilters.AND.push({
         key: 'verified',
         value: 'true',
@@ -238,14 +236,14 @@ async function handleSearch(searchRequest: SearchRequest): Promise<NextResponse>
     console.log('🔍 Calling Supermemory API:', {
       query,
       zones: zonesToSearch,
-      filters: supermemoryFilters.AND.length > 0 ? supermemoryFilters : undefined,
+      filters: supermemoryFilters.AND && supermemoryFilters.AND.length > 0 ? supermemoryFilters : undefined,
       limit
     });
 
     const results = await searchMemories(
       query,
       zonesToSearch,
-      supermemoryFilters.AND.length > 0 ? supermemoryFilters : undefined,
+      supermemoryFilters.AND && supermemoryFilters.AND.length > 0 ? supermemoryFilters : undefined,
       limit
     );
 
