@@ -148,6 +148,7 @@ async function testSearchAPI() {
       console.log(`   Zones searched: ${data.zones.length}`);
 
       if (data.results && data.results.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         data.results.forEach((result: any, i: number) => {
           console.log(`\n      ${i + 1}. ${result.name}`);
           console.log(`         Type: ${result.type}, Price: ₹${result.price}`);
