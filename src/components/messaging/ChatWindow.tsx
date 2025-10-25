@@ -112,7 +112,7 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
 
           // Step 2: Get real data directly from /api/search
           // Get user location (TODO: get from browser geolocation)
-          const userLocation = { lat: 17.4326, lng: 78.4487 }; // Default: Banjara Hills
+          const userLocation = { lat: 17.433, lng: 78.449 }; // Default: Same zone as test salons
           
           // Use extracted search query and business type from decision
           const searchQuery = decision.searchQuery || messageContent.trim();
@@ -137,13 +137,14 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
 
           const searchData = await searchResponse.json();
           
-          logger.debug('�', 'Search Results', searchData);
+          logger.debug('🔍', 'Search Results', searchData);
           
           // Log Supermemory data as JSON
-          if (searchData.debug?.supermemoryRawResults) {
-            console.log('📦 SUPERMEMORY JSON RESPONSE:');
-            console.log(JSON.stringify(searchData.debug.supermemoryRawResults, null, 2));
-          }
+          console.log('📦 SUPERMEMORY JSON RESPONSE:');
+          console.log('Debug object exists:', !!searchData.debug);
+          console.log('Raw results exists:', !!searchData.debug?.supermemoryRawResults);
+          console.log('Raw results length:', searchData.debug?.supermemoryRawResults?.length || 0);
+          console.log('Full search data:', JSON.stringify(searchData, null, 2));
 
           // Step 3: Generate components with real Supermemory data
           const componentResponse = await fetch('/api/chat', {

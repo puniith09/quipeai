@@ -193,7 +193,7 @@ async function handleSearch(searchRequest: SearchRequest): Promise<NextResponse>
 
     if (filters?.type && supermemoryFilters.AND) {
       supermemoryFilters.AND.push({
-        key: 'type',
+        key: 'businessType', // Changed from 'type' to match AI tool metadata
         value: filters.type,
       });
     }
