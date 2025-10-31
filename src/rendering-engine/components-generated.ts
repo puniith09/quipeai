@@ -16,12 +16,14 @@ import { Button } from './components/Button';
 import { Card } from './components/Card';
 import { List } from './components/List';
 import { Text } from './components/Text';
+import { TextInput } from './components/TextInput';
 
 // Import all component examples
 import buttonExample from './components/Button/example.json';
 import cardExample from './components/Card/example.json';
 import listExample from './components/List/example.json';
 import textExample from './components/Text/example.json';
+import textinputExample from './components/TextInput/example.json';
 
 // Component registry for rendering
 export const COMPONENT_REGISTRY = {
@@ -29,6 +31,7 @@ export const COMPONENT_REGISTRY = {
   card: Card,
   list: List,
   text: Text,
+  textinput: TextInput,
 } as const;
 
 // Example registry for AI prompts
@@ -37,7 +40,8 @@ export const EXAMPLE_REGISTRY = {
   card: cardExample,
   list: listExample,
   text: textExample,
+  textinput: textinputExample,
 } as const;
 
 // Export individual components
-export { Button, Card, List, Text };
+export { Button, Card, List, Text, TextInput };

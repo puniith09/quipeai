@@ -3,6 +3,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { renderComponent, type ComponentNode } from '@/rendering-engine';
 import { logger } from '@/lib/logger';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 
 interface Message {
   id: string;
@@ -27,8 +29,25 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
   const [isLoadingComponent, setIsLoadingComponent] = useState(false);
   const internalScrollRef = useRef<HTMLDivElement>(null);
   
+  // Auth context
+  const { login, user, isReturningUser, isLoading: authLoading } = useAuth();
+  const { showToast } = useToast();
+  
+  // OTP state management
+  const [otpState, setOtpState] = useState<{
+    stage: 'idle' | 'awaiting_phone' | 'awaiting_otp';
+    phoneNumber?: string;
+  }>({ stage: 'idle' });
+  
   // Use external ref if provided, otherwise use internal ref
   const scrollContainerRef = externalScrollRef || internalScrollRef;
+
+  // Show welcome back toast for returning users
+  useEffect(() => {
+    if (!authLoading && isReturningUser && user) {
+      showToast(`Welcome back, ${user.phoneNumber}!`, 'success');
+    }
+  }, [authLoading, isReturningUser, user, showToast]);
 
   const sendMessage = async (messageContent: string) => {
     if (!messageContent.trim() || isLoading) return;
@@ -387,6 +406,173 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
     }
   };
 
+  /**
+   * Handle TextInput submission for OTP flows
+   */
+  const handleTextInputSubmit = async (value: string, action?: string) => {
+    logger.debug('📝', 'TextInput Submit', { value, action, otpState });
+    
+    // Check if this is an OTP flow based on action
+    if (action === 'send_otp' || otpState.stage === 'awaiting_phone') {
+      // Phone number submission
+      try {
+        const response = await fetch('/api/auth/send-otp', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ phoneNumber: value })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          // Update OTP state
+          setOtpState({ stage: 'awaiting_otp', phoneNumber: value });
+          
+          // Show success toast
+          showToast(
+            <>
+              <span style={{ fontWeight: 700 }}>Code sent!</span> Check your phone for the OTP.
+            </>,
+            'success'
+          );
+          
+          // Add success message
+          const successMessage: Message = {
+            id: `assistant-${Date.now()}`,
+            type: 'assistant',
+            content: data.message || `OTP sent to ${value}. Please enter the code below.`,
+            timestamp: new Date(),
+            messageType: 'text',
+          };
+          setMessages(prev => [...prev, successMessage]);
+          
+          // Add OTP input component
+          const otpInputMessage: Message = {
+            id: `component-${Date.now()}`,
+            type: 'assistant',
+            content: '',
+            components: [{
+              type: 'textinput',
+              props: {
+                label: 'Enter OTP Code',
+                placeholder: 'Enter 6-digit code',
+                type: 'text',
+                action: 'verify_otp',
+                submitLabel: 'Verify',
+                maxLength: 6,
+              }
+            }],
+            timestamp: new Date(),
+            messageType: 'component',
+          };
+          setMessages(prev => [...prev, otpInputMessage]);
+          
+        } else {
+          // Show error toast
+          showToast(data.error || 'Failed to send OTP. Please try again.', 'error');
+          
+          // Show error message
+          const errorMessage: Message = {
+            id: `assistant-${Date.now()}`,
+            type: 'assistant',
+            content: data.error || 'Failed to send OTP. Please try again.',
+            timestamp: new Date(),
+            messageType: 'text',
+          };
+          setMessages(prev => [...prev, errorMessage]);
+        }
+      } catch (error) {
+        logger.error('Error sending OTP:', error);
+        showToast('Error sending OTP. Please try again.', 'error');
+        
+        const errorMessage: Message = {
+          id: `assistant-${Date.now()}`,
+          type: 'assistant',
+          content: 'Error sending OTP. Please try again.',
+          timestamp: new Date(),
+          messageType: 'text',
+        };
+        setMessages(prev => [...prev, errorMessage]);
+      }
+    } else if (action === 'verify_otp' || otpState.stage === 'awaiting_otp') {
+      // OTP verification
+      try {
+        const response = await fetch('/api/auth/verify-otp', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            phoneNumber: otpState.phoneNumber,
+            code: value
+          })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok && data.verified) {
+          // Reset OTP state
+          setOtpState({ stage: 'idle' });
+          
+          // Store authentication data
+          if (data.token && data.user) {
+            login(data.token, data.user);
+            logger.info('User authenticated:', data.user);
+            
+            // Show success toast
+            showToast(
+              <>
+                <span style={{ fontWeight: 700 }}>Welcome back!</span> You are now signed in.
+              </>,
+              'success'
+            );
+          }
+          
+          // Add success message
+          const successMessage: Message = {
+            id: `assistant-${Date.now()}`,
+            type: 'assistant',
+            content: data.message || `You are now signed in as ${data.user?.phoneNumber || 'user'}.`,
+            timestamp: new Date(),
+            messageType: 'text',
+          };
+          setMessages(prev => [...prev, successMessage]);
+          
+        } else {
+          // Show error toast
+          showToast(data.error || 'Invalid OTP. Please try again.', 'error');
+          
+          // Show error message but keep awaiting_otp state
+          const errorMessage: Message = {
+            id: `assistant-${Date.now()}`,
+            type: 'assistant',
+            content: data.error || 'Invalid OTP. Please try again.',
+            timestamp: new Date(),
+            messageType: 'text',
+          };
+          setMessages(prev => [...prev, errorMessage]);
+        }
+      } catch (error) {
+        logger.error('Error verifying OTP:', error);
+        showToast('Error verifying OTP. Please try again.', 'error');
+        
+        const errorMessage: Message = {
+          id: `assistant-${Date.now()}`,
+          type: 'assistant',
+          content: 'Error verifying OTP. Please try again.',
+          timestamp: new Date(),
+          messageType: 'text',
+        };
+        setMessages(prev => [...prev, errorMessage]);
+      }
+    } else {
+      // For other text inputs, just send as a message
+      sendMessage(value);
+    }
+  };
+
   return (
     <div className="px-4 md:px-6 py-4 pb-24">
       {messages.map((message) => (
@@ -417,7 +603,7 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
               <div className="my-3 space-y-2">
                 {message.components.map((component, index) => (
                   <div key={index}>
-                    {renderComponent(component, index, handleComponentButtonPress)}
+                    {renderComponent(component, index, handleComponentButtonPress, handleTextInputSubmit)}
                   </div>
                 ))}
               </div>
