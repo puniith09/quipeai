@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Poppins } from "next/font/google";
 import { NewRelicProvider } from "@/monitoring/newrelic-provider";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ToastProvider } from "@/contexts/ToastContext";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -48,7 +50,11 @@ export default function RootLayout({
         className={`${poppins.variable} antialiased`}
       >
         <NewRelicProvider />
-        {children}
+        <ToastProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </ToastProvider>
       </body>
     </html>
   );

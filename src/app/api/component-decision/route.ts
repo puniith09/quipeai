@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAvailableComponents } from '@/rendering-engine';
 import { logger } from '@/lib/logger';
+import { componentDecisionPrompt } from '@/prompts';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -16,6 +17,9 @@ interface DecisionResponse {
   needsComponent: boolean;
   reason: string;
   suggestedComponents: string[];
+  searchQuery?: string; // Extracted/refined search terms
+  businessType?: string; // Extracted business category (salon, restaurant, gym, etc)
+  locationContext?: string; // If user mentions specific area
 }
 
 /**
@@ -53,21 +57,7 @@ export async function POST(request: NextRequest) {
       .join('\n');
 
     // Create AI prompt for decision
-    const systemPrompt = `Should this request include visual components?
-
-Available: ${availableComponents.join(', ')}
-
-Return JSON:
-{
-  "needsComponent": true/false,
-  "reason": "brief explanation",
-  "suggestedComponents": ["component1", "component2"]
-}
-
-Use needsComponent: true for anything that can be visualized (lists, items, options, data).
-Use needsComponent: false ONLY for pure greetings or clarifying questions.
-When true, suggest appropriate components from: ${availableComponents.join(', ')}
-When false, suggestedComponents must be []`;
+    const systemPrompt = componentDecisionPrompt(availableComponents);
 
     const messages = [
       { role: 'system', content: systemPrompt },

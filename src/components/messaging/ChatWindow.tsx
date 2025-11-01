@@ -3,6 +3,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { renderComponent, type ComponentNode } from '@/rendering-engine';
 import { logger } from '@/lib/logger';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 
 interface Message {
   id: string;
@@ -27,8 +29,25 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
   const [isLoadingComponent, setIsLoadingComponent] = useState(false);
   const internalScrollRef = useRef<HTMLDivElement>(null);
   
+  // Auth context
+  const { login, user, isReturningUser, isLoading: authLoading } = useAuth();
+  const { showToast } = useToast();
+  
+  // OTP state management
+  const [otpState, setOtpState] = useState<{
+    stage: 'idle' | 'awaiting_phone' | 'awaiting_otp';
+    phoneNumber?: string;
+  }>({ stage: 'idle' });
+  
   // Use external ref if provided, otherwise use internal ref
   const scrollContainerRef = externalScrollRef || internalScrollRef;
+
+  // Show welcome back toast for returning users
+  useEffect(() => {
+    if (!authLoading && isReturningUser && user) {
+      showToast(`Welcome back, ${user.phoneNumber}!`, 'success');
+    }
+  }, [authLoading, isReturningUser, user, showToast]);
 
   const sendMessage = async (messageContent: string) => {
     if (!messageContent.trim() || isLoading) return;
@@ -68,66 +87,18 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
         content: messageContent.trim()
       });
 
-      // ====== PARALLEL: Start Both Requests Together ======
-      // 1. Component decision + generation (background, non-blocking)
-      const componentWorkflow = (async () => {
-        try {
-          // Step 1: Get decision
-          const decisionResponse = await fetch('/api/component-decision', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              prompt: messageContent.trim(),
-              conversationHistory: conversationHistory.slice(-6)
-            }),
-          });
+      // Get user location for AI tools (searchBusinesses will use this)
+      const userLocation = { lat: 17.433, lng: 78.449 }; // Default: Same zone as seeded businesses
 
-          if (!decisionResponse.ok) return null;
-
-          const decision = await decisionResponse.json();
-          logger.debug('🎯', 'Component Decision', decision);
-
-          if (!decision.needsComponent) return null;
-
-          // Step 2: Generate component (if needed) - Don't show loading yet
-          const componentResponse = await fetch('/api/chat', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              messages: conversationHistory,
-              temperature: 0.7,
-              max_tokens: 1500,
-              responseType: 'components',
-              suggestedComponents: decision.suggestedComponents || [],
-            })
-          });
-
-          if (!componentResponse.ok) return null;
-
-          const componentData = await componentResponse.json();
-          const componentsJSON = componentData.choices?.[0]?.message?.content;
-
-          logger.debug('📦', 'Component Response', componentData);
-          logger.debug('📄', 'Components JSON', componentsJSON);
-
-          const parsedComponents = JSON.parse(componentsJSON);
-          logger.debug('✅', 'Parsed Components', parsedComponents);
-
-          return {
-            components: Array.isArray(parsedComponents) ? parsedComponents : [parsedComponents]
-          };
-        } catch (error) {
-          logger.error('Component workflow error:', error);
-          return null;
-        }
-      })();
-
-      // 2. Text response (streaming) - starts immediately in parallel
-      const textResponse = await fetch('/api/chat', {
+      // ====== SIMPLIFIED: Single API call - AI handles everything via tool calling ======
+      // The AI will automatically:
+      // 1. Detect search intent ("find a salon")
+      // 2. Call searchBusinesses tool with location
+      // 3. Get real business data from Supermemory
+      // 4. Auto-generate UI components
+      // 5. Return text response + components in one response
+      
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -136,117 +107,150 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
           messages: conversationHistory,
           temperature: 0.7,
           max_tokens: 1000,
-          responseType: 'text',
-          stream: true,
+          location: userLocation, // Passed to AI for searchBusinesses tool
         })
       });
 
-      if (!textResponse.ok) {
-        throw new Error(`API error: ${textResponse.status}`);
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
       }
 
-      // Create message for streaming text
-      const messageId = `assistant-${Date.now()}`;
-      const textMessage: Message = {
-        id: messageId,
-        type: 'assistant',
-        content: '',
-        timestamp: new Date(),
-        messageType: 'text',
-      };
-
-      setMessages(prev => [...prev, textMessage]);
-
-      // Stream the text response
-      let fullTextContent = '';
-      let isFirstChunk = true;
-      
-      if (textResponse.body) {
-        const reader = textResponse.body.getReader();
+      // Handle streaming response
+      if (response.headers.get('content-type')?.includes('text/event-stream')) {
+        const reader = response.body?.getReader();
         const decoder = new TextDecoder();
-
+        
+        // Create assistant message for streaming text
+        const assistantMessageId = `assistant-${Date.now()}`;
+        const assistantMessage: Message = {
+          id: assistantMessageId,
+          type: 'assistant',
+          content: '',
+          timestamp: new Date(),
+          messageType: 'text',
+        };
+        
+        setMessages(prev => [...prev, assistantMessage]);
+        setIsLoading(false); // Show message immediately with empty content
+        
+        let accumulatedText = '';
+        let receivedComponents: ComponentNode[] | null = null;
+        
         try {
-          while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-
-            const chunk = decoder.decode(value, { stream: true });
+          while (reader) {
+            const { done, value } = await reader.read();
             
-            // Parse SSE format from OpenRouter
-            const lines = chunk.split('\n');
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                const data = line.slice(6);
-                if (data === '[DONE]') continue;
-                
-                try {
-                  const parsed = JSON.parse(data);
-                  const content = parsed.choices?.[0]?.delta?.content;
-                  if (content) {
-                    // Hide "quiping..." only when we receive the first content
-                    if (isFirstChunk) {
-                      setIsLoading(false);
-                      isFirstChunk = false;
+            // Process chunk even if done is true (to catch final components)
+            if (value) {
+              const chunk = decoder.decode(value, { stream: true });
+              const lines = chunk.split('\n');
+              
+              console.log('📦 Stream chunk lines:', lines.length, 'done:', done);
+              
+              for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                  const data = line.slice(6);
+                  
+                  if (data === '[DONE]') {
+                    console.log('✅ Stream completed');
+                    continue;
+                  }
+                  
+                  try {
+                    const parsed = JSON.parse(data);
+                    
+                    // Handle custom events (components)
+                    if (parsed.type === 'components') {
+                      console.log('🎯 DETECTED COMPONENT EVENT:', parsed);
+                      receivedComponents = parsed.data;
+                      continue;
                     }
                     
-                    fullTextContent += content;
-                    
-                    // Update message with streaming content
-                    setMessages(prev => prev.map(msg =>
-                      msg.id === messageId
-                        ? { ...msg, content: fullTextContent }
-                        : msg
-                    ));
+                    // Handle standard OpenRouter streaming format
+                    const delta = parsed.choices?.[0]?.delta?.content;
+                    if (delta) {
+                      accumulatedText += delta;
+                      
+                      // Update message with accumulated text
+                      setMessages(prev => prev.map(msg => 
+                        msg.id === assistantMessageId 
+                          ? { ...msg, content: accumulatedText }
+                          : msg
+                      ));
+                    }
+                  } catch (parseError) {
+                    // Ignore parse errors for malformed chunks
                   }
-                } catch {
-                  // Skip unparseable lines
-                  continue;
                 }
               }
             }
+            
+            if (done) break;
+          }
+          
+          // After streaming is done, add components if they were received
+          if (receivedComponents && receivedComponents.length > 0) {
+            console.log('✨ COMPONENTS RECEIVED:', receivedComponents);
+            logger.debug('✨', 'Received components from stream', receivedComponents);
+            
+            const componentMessage: Message = {
+              id: `component-${Date.now()}`,
+              type: 'assistant',
+              content: '',
+              components: receivedComponents,
+              timestamp: new Date(),
+              messageType: 'component',
+            };
+            
+            console.log('✨ ADDING COMPONENT MESSAGE:', componentMessage);
+            setMessages(prev => [...prev, componentMessage]);
+          } else {
+            console.log('❌ NO COMPONENTS RECEIVED:', receivedComponents);
           }
         } catch (streamError) {
-          logger.error('Streaming error:', streamError);
-          // Hide loading if there's an error
-          setIsLoading(false);
+          logger.error('Stream reading error:', streamError);
         }
-      }
-      
-      // Ensure loading is hidden even if no content was streamed
-      setIsLoading(false);
+      } else {
+        // Fallback to non-streaming response
+        const data = await response.json();
+        
+        logger.debug('🤖', 'AI Response', data);
+        
+        // Extract text response
+        const assistantContent = data.choices?.[0]?.message?.content || 'Sorry, I could not generate a response.';
+        
+        // Extract auto-generated components (if AI called searchBusinesses + generateComponents)
+        const components = data.components;
 
-      // ====== STEP 2: Check if Component is Ready ======
-      // Use Promise.race to check if component is ready without waiting
-      const checkReady = Promise.race([
-        componentWorkflow.then(() => true),
-        Promise.resolve(false)
-      ]);
-      
-      const isReady = await checkReady;
-      
-      // If component decision said yes but not ready yet, show loading
-      if (!isReady) {
-        setIsLoadingComponent(true);
-      }
-      
-      // Now wait for component to finish
-      const componentResult = await componentWorkflow;
-      
-      // Hide loading
-      setIsLoadingComponent(false);
-      
-      if (componentResult && componentResult.components) {
-        // ====== STEP 3: Render Component ======
-        const componentMessage: Message = {
-          id: `component-${Date.now()}`,
+        // Hide loading indicator
+        setIsLoading(false);
+
+        // Add text response message
+        const assistantMessage: Message = {
+          id: `assistant-${Date.now()}`,
           type: 'assistant',
-          content: '',
-          components: componentResult.components,
+          content: assistantContent,
           timestamp: new Date(),
-          messageType: 'component',
+          messageType: 'text',
         };
 
-        setMessages(prev => [...prev, componentMessage]);
+        setMessages(prev => [...prev, assistantMessage]);
+
+        // If components were auto-generated, add them as a separate message
+        if (components && components.length > 0) {
+          logger.debug('✨', 'Auto-generated components', components);
+          
+          const componentMessage: Message = {
+            id: `component-${Date.now()}`,
+            type: 'assistant',
+            content: '',
+            components: components,
+            timestamp: new Date(),
+            messageType: 'component',
+          };
+
+          setMessages(prev => [...prev, componentMessage]);
+        }
       }
 
     } catch (error) {
@@ -387,6 +391,20 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
     }
   };
 
+  /**
+   * Handle TextInput submission for OTP flows
+   */
+  const handleTextInputSubmit = async (value: string, action?: string) => {
+    logger.debug('📝', 'TextInput Submit', { value, action });
+    
+    // For ALL text input submissions, send as a chat message
+    // The AI will handle phone numbers, OTP codes, and any other inputs
+    if (value.trim()) {
+      // Send as a regular chat message - AI will handle it
+      sendMessage(value);
+    }
+  };
+
   return (
     <div className="px-4 md:px-6 py-4 pb-24">
       {messages.map((message) => (
@@ -417,7 +435,7 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
               <div className="my-3 space-y-2">
                 {message.components.map((component, index) => (
                   <div key={index}>
-                    {renderComponent(component, index, handleComponentButtonPress)}
+                    {renderComponent(component, index, handleComponentButtonPress, handleTextInputSubmit)}
                   </div>
                 ))}
               </div>
