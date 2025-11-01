@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
+import { buttonInterpretPrompt } from '@/prompts';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -44,26 +45,12 @@ export async function POST(request: NextRequest) {
       : '';
 
     // Create AI prompt for generating natural user message
-    const systemPrompt = `You are a helpful assistant that converts UI button clicks into natural, conversational user messages.
-
-When a user clicks a button in a chat interface, generate a SHORT, natural message (3-8 words) that represents what the user wants to say.
-
-Rules:
-- Maximum 3-8 words
-- Sound natural and conversational
-- Consider the conversation context if provided
-- Interpret the button's intent, don't just repeat the exact text
-- Use lowercase unless it's a proper noun
-- No quotes, minimal punctuation
-
-Return ONLY the message text, nothing else.`;
-
     const userPrompt = recentContext
       ? `Conversation context:\n${recentContext}\n\nUser clicked button: "${body.buttonLabel}"${body.action ? `\nButton action: "${body.action}"` : ''}\n\nGenerate a natural user message:`
       : `User clicked button: "${body.buttonLabel}"${body.action ? `\nButton action: "${body.action}"` : ''}\n\nGenerate a natural user message:`;
 
     const messages = [
-      { role: 'system', content: systemPrompt },
+      { role: 'system', content: buttonInterpretPrompt },
       { role: 'user', content: userPrompt }
     ];
 

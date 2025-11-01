@@ -90,23 +90,26 @@ export function normalizeToGridCenter(
 ): { lat: number; lng: number } {
   const gridDegrees = GRID_SIZE_DEGREES[gridSize];
 
-  // Snap to grid
-  const normalizedLat = Math.floor(lat / gridDegrees) * gridDegrees + gridDegrees / 2;
-  const normalizedLng = Math.floor(lng / gridDegrees) * gridDegrees + gridDegrees / 2;
+  // Snap to grid - first round inputs to avoid floating point issues
+  const roundedLat = Math.round(lat * 1000000) / 1000000;
+  const roundedLng = Math.round(lng * 1000000) / 1000000;
+  
+  const normalizedLat = Math.floor(roundedLat / gridDegrees) * gridDegrees + gridDegrees / 2;
+  const normalizedLng = Math.floor(roundedLng / gridDegrees) * gridDegrees + gridDegrees / 2;
 
   // Round to 3 decimal places (~111m precision)
-  const roundedLat = Math.round(normalizedLat * 1000) / 1000;
-  const roundedLng = Math.round(normalizedLng * 1000) / 1000;
+  const finalLat = Math.round(normalizedLat * 1000) / 1000;
+  const finalLng = Math.round(normalizedLng * 1000) / 1000;
 
   logger.info('Normalized coordinates to grid center', {
     original: { lat, lng },
-    normalized: { lat: roundedLat, lng: roundedLng },
+    normalized: { lat: finalLat, lng: finalLng },
     gridSize,
   });
 
   return {
-    lat: roundedLat,
-    lng: roundedLng,
+    lat: finalLat,
+    lng: finalLng,
   };
 }
 
@@ -171,8 +174,12 @@ export function getZoneContainerTag(
   // Format date as YYYY-MM-DD
   const dateStr = targetDate.toISOString().split('T')[0];
   
+  // Replace dots with underscores in coordinates (Supermemory requires alphanumeric + hyphens + underscores only)
+  const latStr = lat.toString().replace(/\./g, '_');
+  const lngStr = lng.toString().replace(/\./g, '_');
+  
   // Format: zone_{lat}_{lng}_{gridSize}_{date}_{hourWindow}
-  const tag = `zone_${lat}_${lng}_${gridSize}_${dateStr}_${window}`;
+  const tag = `zone_${latStr}_${lngStr}_${gridSize}_${dateStr}_${window}`;
   
   logger.info('Generated zone container tag', {
     lat,
@@ -201,16 +208,22 @@ export function parseZoneContainerTag(tag: string): {
   date: string;
   hourWindow: number;
 } | null {
-  const match = tag.match(/^zone_(-?\d+\.?\d*)_(-?\d+\.?\d*)_(500m|1km|2km|5km)_(\d{4}-\d{2}-\d{2})_(\d+)$/);
+  // Updated regex to match underscores instead of dots in coordinates
+  // Example: zone_17_438_78_448_1km_2025-10-31_18
+  const match = tag.match(/^zone_(-?\d+(?:_\d+)?)_(-?\d+(?:_\d+)?)_(500m|1km|2km|5km)_(\d{4}-\d{2}-\d{2})_(\d+)$/);
   
   if (!match) {
     logger.warn('Invalid zone container tag format', { tag });
     return null;
   }
 
+  // Convert underscores back to dots for coordinates
+  const latStr = match[1].replace(/_/g, '.');
+  const lngStr = match[2].replace(/_/g, '.');
+
   return {
-    lat: parseFloat(match[1]),
-    lng: parseFloat(match[2]),
+    lat: parseFloat(latStr),
+    lng: parseFloat(lngStr),
     gridSize: match[3] as GridSize,
     date: match[4],
     hourWindow: parseInt(match[5], 10),

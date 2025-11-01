@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAvailableComponents } from '@/rendering-engine';
 import { logger } from '@/lib/logger';
+import { componentDecisionPrompt } from '@/prompts';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -56,42 +57,7 @@ export async function POST(request: NextRequest) {
       .join('\n');
 
     // Create AI prompt for decision
-    const systemPrompt = `You are a smart assistant that analyzes user requests and extracts structured information.
-
-Available components: ${availableComponents.join(', ')}
-
-Your task:
-1. Decide if visual components are needed
-2. Extract search intent and business type from the message
-3. Identify location context if mentioned
-
-Return JSON:
-{
-  "needsComponent": true/false,
-  "reason": "brief explanation",
-  "suggestedComponents": ["component1", "component2"],
-  "searchQuery": "refined search terms (e.g., 'haircut salon')",
-  "businessType": "category (salon, restaurant, gym, hotel, spa, clinic, etc)",
-  "locationContext": "specific area if mentioned (e.g., 'Banjara Hills', 'Kondapur')"
-}
-
-Examples:
-- "i want a hair cut" → searchQuery: "haircut salon", businessType: "salon"
-- "find me a restaurant" → searchQuery: "restaurant", businessType: "restaurant"
-- "i need a gym in kondapur" → searchQuery: "gym", businessType: "gym", locationContext: "kondapur"
-- "hello" → needsComponent: false, no searchQuery/businessType
-
-SPECIAL: For authentication/sign-in/login requests, use "textinput" for phone number entry.
-
-Use needsComponent: true for:
-- Authentication requests (sign in, login, verify) → use "textinput"
-- Anything that can be visualized (lists, items, options, data)
-
-Use needsComponent: false ONLY for pure greetings or clarifying questions.
-When true, suggest appropriate components from: ${availableComponents.join(', ')}
-When false, suggestedComponents must be []
-
-IMPORTANT: Always extract searchQuery and businessType when user asks to find/search for services!`;
+    const systemPrompt = componentDecisionPrompt(availableComponents);
 
     const messages = [
       { role: 'system', content: systemPrompt },
