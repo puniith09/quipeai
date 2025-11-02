@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAvailableComponents, getAllComponentSchemas } from '@/rendering-engine';
 import { logger } from '@/lib/logger';
+import { getAuthToolDefinitions, executeAuthTool } from '@/lib/auth-tools';
+import { getAuthCookie } from '@/lib/auth/cookies';
+import { verifyToken } from '@/lib/auth/jwt';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -26,6 +29,24 @@ export async function POST(request: NextRequest) {
         { error: 'OpenRouter API key not configured' },
         { status: 500 }
       );
+    }
+
+    // Check authentication status from cookie
+    let isAuthenticated = false;
+    let userId = '';
+    try {
+      const authToken = await getAuthCookie();
+      if (authToken) {
+        const payload = await verifyToken(authToken);
+        if (payload) {
+          isAuthenticated = true;
+          userId = payload.userId;
+          logger.debug('🔐', 'Authenticated user', { userId: payload.userId });
+        }
+      }
+    } catch (error) {
+      logger.debug('🔐', 'Auth check failed', { error });
+      // Continue as unauthenticated
     }
 
     // Parse request body
@@ -74,11 +95,6 @@ export async function POST(request: NextRequest) {
     const systemPrompt = isComponentRequest 
       ? `You are a UI component generator. Generate VISUAL UI components with actual content.
 
-RENDERING CONTEXT: Components render on a BLACK background (#000000). Choose colors accordingly:
-- Use light/bright colors for text (white, light gray, cyan, etc.)
-- Avoid dark colors that won't show on black
-- Default text should be light if no color specified
-
 CRITICAL: You can ONLY use these component types: ${availableComponents.join(', ')}
 
 Rules:
@@ -86,7 +102,6 @@ Rules:
 - Study the schemas below for EXACT format and available props
 - Generate ACTUAL content, not placeholders
 - Cards can be nested to create structured layouts
-- Remember: BLACK background - use visible colors
 
 Component Schemas:
 ${schemaExamples}
@@ -96,6 +111,8 @@ Return ONLY valid JSON. No markdown, no explanation.`
 
 Available UI components in the system: ${getAvailableComponents().join(', ')}
 
+USER AUTHENTICATION STATUS: ${isAuthenticated ? `LOGGED IN (userId: ${userId})` : 'NOT LOGGED IN (Guest)'}
+
 CONTEXT: You are part of a dual-response system. Your text response MAY OR MAY NOT be followed by a visual component 
 that displays content. Sometimes you'll provide a text answer, other times a component will follow.
 
@@ -103,6 +120,20 @@ IMPORTANT: Be natural, warm, and conversational. Write 1-1.5 sentences with pers
 If a visual component might follow, give a friendly introduction with context.
 DO NOT list items or details if a component will show that - just be conversational and set it up.
 DO NOT use emojis.
+
+CRITICAL: You have access to tools/functions. When a user asks to sign in, login, authenticate, or create an account, 
+you MUST call the request_phone_otp tool instead of asking for their phone number in text.
+
+LOGOUT: If user asks to logout or sign out, tell them to use the settings button (⚙️ icon in the top right corner).
+
+IMPORTANT: Only mention actions that have already completed, not what will happen next.
+
+LOGIN ENCOURAGEMENT STRATEGY:
+- If user is NOT LOGGED IN and has had 2-3+ message exchanges, occasionally (not every time) gently suggest creating an account
+- Use the offer_login_choice tool to show two buttons: "Sign In" and "Continue as Guest"
+- DO NOT be pushy - be casual and friendly
+- If they seem engaged and satisfied with a conversation, that's a good time to suggest it
+- The offer_login_choice tool will handle the UI - you just need to call it with a friendly message
 
 Your style should feel like chatting with a friend - engaging, descriptive, and thoughtful.`;
 
@@ -113,7 +144,49 @@ Your style should feel like chatting with a friend - engaging, descriptive, and 
       ...body.messages
     ];
 
+    // Add auth tools for text responses (not component generation)
+    const tools = !isComponentRequest ? getAuthToolDefinitions() : undefined;
+    
+    if (tools && tools.length > 0) {
+      logger.debug('🔧', 'Auth Tools Available', { count: tools.length, tools: tools.map(t => t.function.name) });
+    }
+
+    // Disable streaming when tools are present (OpenRouter needs JSON response to return tool calls)
+    const shouldStream = body.stream && !(tools && tools.length > 0);
+
+    // Use Cerebras for tool calling (ultra-fast), OpenAI for regular chat
+    const modelConfig = (tools && tools.length > 0) 
+      ? {
+          model: 'openai/gpt-oss-120b', // Cerebras: 0.31s latency, supports tool calling
+          provider: {
+            order: ['Cerebras'],
+            allow_fallbacks: false,
+          },
+        }
+      : {
+          model: 'openai/gpt-4o-mini', // OpenAI for regular streaming chat
+          provider: {
+            order: ['OpenAI'],
+            allow_fallbacks: false,
+          },
+        };
+
     // Call OpenRouter API from server
+    const requestBody = {
+      ...modelConfig,
+      messages: messagesWithSystem,
+      temperature: body.temperature || 0.7,
+      max_tokens: body.max_tokens || 1000,
+      stream: shouldStream,
+      ...(tools && tools.length > 0 ? { tools, tool_choice: 'auto' } : {}),
+    };
+    
+    logger.debug('📤', 'OpenRouter Request', { 
+      model: requestBody.model,
+      hasTools: !!requestBody.tools, 
+      toolCount: requestBody.tools?.length || 0 
+    });
+
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -122,13 +195,7 @@ Your style should feel like chatting with a friend - engaging, descriptive, and 
         'HTTP-Referer': request.headers.get('referer') || '',
         'X-Title': 'QuipeAI'
       },
-      body: JSON.stringify({
-        model: 'openai/gpt-4o-mini',
-        messages: messagesWithSystem,
-        temperature: body.temperature || 0.7,
-        max_tokens: body.max_tokens || 1000,
-        stream: body.stream,
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
@@ -139,7 +206,159 @@ Your style should feel like chatting with a friend - engaging, descriptive, and 
       );
     }
 
-    // Handle streaming response
+    // FIRST: Check for non-streaming response or tool calls
+    // If we have tools, we need to check the response for tool calls before streaming
+    const hasTools = requestBody.tools && requestBody.tools.length > 0;
+    logger.debug('🔍', 'Response handling', { hasTools, stream: body.stream });
+    
+    if (!body.stream || hasTools) {
+      logger.debug('📥', 'Getting JSON response...');
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        logger.error('❌ Failed to parse response JSON:', jsonError);
+        throw new Error(`Failed to parse OpenRouter response: ${jsonError}`);
+      }
+      logger.debug('✅', 'JSON received', { hasToolCalls: !!data.choices?.[0]?.message?.tool_calls });
+      
+      // Check if AI wants to call a tool
+      if (data.choices?.[0]?.message?.tool_calls) {
+        const toolCalls = data.choices[0].message.tool_calls;
+        logger.info('🔧', 'AI requested tool calls', { count: toolCalls.length });
+        
+        // Execute the first tool call (can be extended for multiple)
+        const toolCall = toolCalls[0];
+        const toolName = toolCall.function.name;
+        const toolArgs = JSON.parse(toolCall.function.arguments);
+        
+        // Execute auth tool
+        const toolResult = await executeAuthTool(toolName, toolArgs);
+        
+        if (toolResult.success) {
+          // Tool executed successfully - now get AI's natural response
+          // Add tool result to conversation so AI knows what happened
+          const toolResponseMessages = [
+            ...messagesWithSystem,
+            {
+              role: 'assistant' as const,
+              content: '',
+              tool_calls: [toolCall]
+            },
+            {
+              role: 'tool' as const,
+              tool_call_id: toolCall.id,
+              name: toolName,
+              content: JSON.stringify({
+                success: true,
+                ...toolResult.metadata
+              })
+            }
+          ];
+
+          // Ask AI to craft a natural response based on tool result
+          const finalResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+              'HTTP-Referer': request.headers.get('referer') || '',
+              'X-Title': 'QuipeAI'
+            },
+            body: JSON.stringify({
+              model: modelConfig.model,
+              messages: toolResponseMessages,
+              temperature: 0.7,
+              max_tokens: 200,
+              provider: modelConfig.provider,
+            })
+          });
+
+          const finalData = await finalResponse.json();
+          const aiResponse = finalData.choices?.[0]?.message?.content || 'Done!';
+
+          // Return AI's natural response with components
+          return NextResponse.json({
+            choices: [{
+              message: {
+                role: 'assistant',
+                content: aiResponse,
+                tool_result: {
+                  success: true,
+                  components: toolResult.components,
+                  metadata: toolResult.metadata, // Include metadata for client
+                }
+              }
+            }]
+          });
+        } else {
+          // Tool failed - also get AI's natural error response
+          const toolResponseMessages = [
+            ...messagesWithSystem,
+            {
+              role: 'assistant' as const,
+              content: '',
+              tool_calls: [toolCall]
+            },
+            {
+              role: 'tool' as const,
+              tool_call_id: toolCall.id,
+              name: toolName,
+              content: JSON.stringify({
+                success: false,
+                error: toolResult.error,
+                ...toolResult.metadata
+              })
+            }
+          ];
+
+          const finalResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+              'HTTP-Referer': request.headers.get('referer') || '',
+              'X-Title': 'QuipeAI'
+            },
+            body: JSON.stringify({
+              model: modelConfig.model,
+              messages: toolResponseMessages,
+              temperature: 0.7,
+              max_tokens: 200,
+              provider: modelConfig.provider,
+            })
+          });
+
+          const finalData = await finalResponse.json();
+          const aiResponse = finalData.choices?.[0]?.message?.content || 'Something went wrong.';
+
+          return NextResponse.json({
+            choices: [{
+              message: {
+                role: 'assistant',
+                content: aiResponse,
+                tool_result: {
+                  success: false,
+                  components: toolResult.components || [],
+                  metadata: toolResult.metadata, // Include metadata for client
+                }
+              }
+            }]
+          });
+        }
+      }
+      
+      // If no tool calls, return normal JSON response
+      if (!body.stream) {
+        return NextResponse.json(data);
+      }
+      
+      // If stream was requested but tools were present, we already consumed the response
+      // So we need to return the data as-is (can't stream it now)
+      return NextResponse.json(data);
+    }
+
+    // Handle streaming response (only if no tools)
     if (body.stream && response.body) {
       // Create a custom stream with character-by-character delay
       const reader = response.body.getReader();
@@ -217,17 +436,16 @@ Your style should feel like chatting with a friend - engaging, descriptive, and 
         },
       });
     }
-
-    // Handle non-streaming response
-    const data = await response.json();
     
-    // Return the response
-    return NextResponse.json(data);
+    // This should never be reached as we handle all cases above
+    logger.error('❌ Unexpected state reached in chat API');
+    return NextResponse.json({ error: 'Unexpected state' }, { status: 500 });
     
   } catch (error) {
     logger.error('Chat API error:', error);
+    console.error('💥 CHAT API ERROR DETAILS:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

@@ -2,7 +2,24 @@ import type { NextConfig } from "next";
 import withPWA from "next-pwa";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+      };
+    }
+    config.optimization = {
+      ...config.optimization,
+      minimize: true,
+    };
+    return config;
+  },
+  experimental: {
+    optimizePackageImports: ['@prelude.so/sdk', '@prisma/client'],
+  },
 };
 
 export default withPWA({

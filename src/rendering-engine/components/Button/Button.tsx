@@ -8,6 +8,7 @@ interface ButtonProps {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   action?: string;
+  message?: string; // Message to send when button is clicked
   onClick?: () => void;
   backgroundColor?: string;
   textColor?: string;
@@ -28,6 +29,7 @@ export const Button: React.FC<ButtonProps> = ({
   variant = 'primary',
   size = 'md',
   action,
+  message,
   onClick,
   backgroundColor,
   textColor,
