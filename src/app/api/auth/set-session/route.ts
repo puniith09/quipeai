@@ -13,12 +13,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { token } = body;
     
-    if (!token) {
+    if (!token || typeof token !== 'string') {
+      logger.error('Invalid token format:', typeof token);
       return NextResponse.json(
-        { error: 'Token is required' },
+        { error: 'Valid token string is required' },
         { status: 400 }
       );
     }
+    
+    logger.info('Verifying token for set-session');
     
     // Verify the token is valid
     const payload = await verifyToken(token);
