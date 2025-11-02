@@ -27,13 +27,10 @@ export default withPWA({
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === "development",
-  // Improve installation speed
   buildExcludes: [/middleware-manifest\.json$/],
   publicExcludes: ["!robots.txt", "!sitemap.xml"],
-  // Faster service worker compilation
   scope: "/",
   sw: "sw.js",
-  // Optimize caching for faster loads
   runtimeCaching: [
     {
       urlPattern: /^https:\/\/fonts\.(?:gstatic)\.com\/.*/i,
@@ -42,7 +39,7 @@ export default withPWA({
         cacheName: "google-fonts-webfonts",
         expiration: {
           maxEntries: 4,
-          maxAgeSeconds: 365 * 24 * 60 * 60, // 1 year
+          maxAgeSeconds: 365 * 24 * 60 * 60,
         },
       },
     },
@@ -53,7 +50,7 @@ export default withPWA({
         cacheName: "google-fonts-stylesheets",
         expiration: {
           maxEntries: 4,
-          maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
+          maxAgeSeconds: 7 * 24 * 60 * 60,
         },
       },
     },

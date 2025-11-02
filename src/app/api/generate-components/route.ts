@@ -11,12 +11,6 @@ interface GenerateComponentsRequest {
   contextData?: Record<string, unknown>; // Additional context data to include
 }
 
-/**
- * Generic Component Generation API
- * 
- * Generates UI components based on prompt and available components.
- * Can optionally search Supermemory first and include results in generation.
- */
 export async function POST(request: NextRequest) {
   try {
     const apiKey = process.env.OPENROUTER_API_KEY;
@@ -30,7 +24,6 @@ export async function POST(request: NextRequest) {
 
     const body: GenerateComponentsRequest = await request.json();
     
-    // Validate request
     if (!body.prompt || typeof body.prompt !== 'string') {
       return NextResponse.json(
         { error: 'Invalid request: prompt is required' },
@@ -51,7 +44,6 @@ export async function POST(request: NextRequest) {
       searchSupermemory: body.searchSupermemory || false,
     });
 
-    // Step 1: Optional Supermemory search
     let searchResults = null;
     if (body.searchSupermemory && body.searchQuery) {
       try {
@@ -81,11 +73,9 @@ export async function POST(request: NextRequest) {
         }
       } catch (error) {
         logger.error('Supermemory search failed:', error);
-        // Continue without search results
       }
     }
 
-    // Step 2: Get component schemas for the required components
     const allSchemas = getAllComponentSchemas();
     const relevantSchemas: Record<string, unknown> = {};
     
@@ -104,7 +94,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate schema examples
     const schemaExamples = Object.entries(relevantSchemas)
       .map(([name, schema]) => `${name.charAt(0).toUpperCase() + name.slice(1)} Component:\n${JSON.stringify(schema, null, 2)}`)
       .join('\n\n');
@@ -114,7 +103,6 @@ export async function POST(request: NextRequest) {
       schemaCount: Object.keys(relevantSchemas).length 
     });
 
-    // Step 3: Build AI prompt
     const systemPrompt = `You are a UI component generator. Generate VISUAL UI components with actual content.
 
 CRITICAL: You can ONLY use these component types: ${body.requiredComponents.join(', ')}
@@ -135,7 +123,6 @@ Return ONLY valid JSON. No markdown, no explanation.`;
 
     const userPrompt = body.prompt;
 
-    // Step 4: Call OpenRouter API with Cerebras GPT-OSS-120b for ultra-fast generation
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -178,12 +165,10 @@ Return ONLY valid JSON. No markdown, no explanation.`;
       );
     }
 
-    // Step 5: Parse and validate components
     try {
       const parsedComponents = JSON.parse(componentsJSON);
       let components = Array.isArray(parsedComponents) ? parsedComponents : [parsedComponents];
       
-      // Validate and filter out invalid components
       const validTypes = body.requiredComponents;
       components = components.filter(comp => {
         if (!comp || !comp.type) {

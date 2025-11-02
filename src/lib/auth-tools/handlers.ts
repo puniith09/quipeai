@@ -1,9 +1,3 @@
-/**
- * Authentication Tool Handlers
- * 
- * Executes authentication tool calls and generates UI components using AI
- */
-
 import { ComponentNode } from '@/rendering-engine/types';
 import { logger } from '@/lib/logger';
 import { generateComponentsWithAI } from '@/lib/component-generator';
@@ -17,12 +11,9 @@ export interface ToolCallResult {
   message?: string;
   components?: ComponentNode[];
   error?: string;
-  metadata?: Record<string, unknown>; // Additional data for AI context
+  metadata?: Record<string, unknown>;
 }
 
-/**
- * Call the generic component generation API
- */
 async function generateComponents(
   prompt: string,
   requiredComponents: string[],
@@ -37,10 +28,6 @@ async function generateComponents(
 }
 
 
-/**
- * Handle request_phone_otp tool call
- * Uses AI to generate phone input UI
- */
 export async function handleRequestPhoneOTP(args: {
   reason?: string;
 }): Promise<ToolCallResult> {
@@ -69,21 +56,16 @@ Context: ${args.reason || 'User wants to sign in to their account'}`;
 
   return {
     success: true,
-    message: '', // AI will craft the message
+    message: '',
     components,
     metadata: {
       action: 'request_phone',
       reason: args.reason,
-      // Tell AI: We're just showing the form, code will be sent AFTER user enters phone
       instruction: 'Ask user to enter their phone number. Do NOT say code has been sent yet - that happens after they submit the number.'
     }
   };
 }
 
-/**
- * Handle offer_login_choice tool call
- * Uses AI to generate two-button choice UI
- */
 export async function handleOfferLoginChoice(args: {
   message?: string;
 }): Promise<ToolCallResult> {
@@ -118,17 +100,10 @@ IMPORTANT: Both buttons MUST have a "message" prop that specifies what message t
 
   return {
     success: true,
-    message: '', // AI will craft the message naturally
+    message: '',
     components,
   };
 }
-
-/**
- * Handle check_auth_status tool call
-/**
- * Handle send_otp_to_phone tool call
- * Validates phone number and actually sends OTP
- */
 export async function handleSendOTPToPhone(args: {
   phoneNumber: string;
 }): Promise<ToolCallResult> {
@@ -205,7 +180,6 @@ Show this in a friendly way and tell the user when they can try again.`,
 
     logger.info('OTP sent successfully:', verification.id);
 
-    // OTP sent successfully - generate OTP input UI
     const components = await generateComponents(
       `Create an OTP code input form for verification.
       
@@ -222,7 +196,7 @@ Requirements:
 
     return {
       success: true,
-      message: '', // AI will craft success message
+      message: '',
       components,
       metadata: { phoneNumber: args.phoneNumber, otpSent: true }
     };
@@ -235,10 +209,6 @@ Requirements:
   }
 }
 
-/**
- * Handle verify_otp_code tool call
- * Validates OTP code and completes authentication
- */
 export async function handleVerifyOTPCode(args: {
   phoneNumber: string;
   otpCode: string;
@@ -343,8 +313,6 @@ Requirements:
 
     logger.info('User authenticated successfully:', user.id);
 
-    // Success! User is now authenticated
-    // Return the token for client-side cookie setting (no phone number)
     return {
       success: true,
       message: '',
@@ -365,28 +333,24 @@ Requirements:
   }
 }
 
-/**
- * Execute an authentication tool call
- */
 export async function executeAuthTool(
   toolName: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  args: any
+  args: Record<string, unknown>
 ): Promise<ToolCallResult> {
   logger.debug('🔧', 'Executing Auth Tool', { toolName, args });
 
   switch (toolName) {
     case 'request_phone_otp':
-      return handleRequestPhoneOTP(args);
+      return handleRequestPhoneOTP(args as { reason?: string });
     
     case 'offer_login_choice':
-      return handleOfferLoginChoice(args);
+      return handleOfferLoginChoice(args as { message?: string });
     
     case 'send_otp_to_phone':
-      return handleSendOTPToPhone(args);
+      return handleSendOTPToPhone(args as { phoneNumber: string });
     
     case 'verify_otp_code':
-      return handleVerifyOTPCode(args);
+      return handleVerifyOTPCode(args as { phoneNumber: string; otpCode: string });
     
     default:
       return {

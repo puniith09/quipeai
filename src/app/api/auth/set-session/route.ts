@@ -3,11 +3,6 @@ import { setAuthCookieInResponse } from '@/lib/auth/cookies';
 import { verifyToken } from '@/lib/auth/jwt';
 import { logger } from '@/lib/logger';
 
-/**
- * POST /api/auth/set-session
- * Sets the authentication cookie from a provided token
- * Used after server-side authentication to set client-side cookie
- */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -23,7 +18,6 @@ export async function POST(request: NextRequest) {
     
     logger.info('Verifying token for set-session');
     
-    // Verify the token is valid
     const payload = await verifyToken(token);
     
     if (!payload) {
@@ -33,7 +27,6 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Create response - only return userId (no phone number)
     const response = NextResponse.json({
       success: true,
       message: 'Session cookie set successfully',
@@ -42,7 +35,6 @@ export async function POST(request: NextRequest) {
       },
     });
     
-    // Set the cookie in the response
     setAuthCookieInResponse(response, token);
     
     logger.info('🍪 Session cookie set successfully', { userId: payload.userId });

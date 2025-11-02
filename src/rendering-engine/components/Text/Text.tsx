@@ -16,10 +16,6 @@ export interface TextProps {
   children?: React.ReactNode;
 }
 
-/**
- * Text Component
- * Displays text with various styling options
- */
 export const Text: React.FC<TextProps> = ({
   content,
   variant = 'body',
@@ -33,7 +29,6 @@ export const Text: React.FC<TextProps> = ({
   letterSpacing,
   children,
 }) => {
-  // Variant-based default sizes
   const variantSizes = {
     caption: 'text-xs',
     label: 'text-sm',
@@ -42,7 +37,6 @@ export const Text: React.FC<TextProps> = ({
     heading: 'text-2xl',
   };
 
-  // Size classes
   const sizeClasses = {
     xs: 'text-xs',
     sm: 'text-sm',
@@ -53,7 +47,6 @@ export const Text: React.FC<TextProps> = ({
     '3xl': 'text-3xl',
   };
 
-  // Weight classes
   const weightClasses = {
     normal: 'font-normal',
     medium: 'font-medium',
@@ -61,14 +54,12 @@ export const Text: React.FC<TextProps> = ({
     bold: 'font-bold',
   };
 
-  // Alignment classes
   const alignClasses = {
     left: 'text-left',
     center: 'text-center',
     right: 'text-right',
   };
 
-  // Build className
   const className = [
     size ? sizeClasses[size] : variantSizes[variant],
     weightClasses[weight],
@@ -79,14 +70,12 @@ export const Text: React.FC<TextProps> = ({
     .filter(Boolean)
     .join(' ');
 
-  // Build inline styles
   const style: React.CSSProperties = {
     ...(color && { color }),
     ...(lineHeight && { lineHeight }),
     ...(letterSpacing && { letterSpacing }),
   };
 
-  // Choose element based on variant
   const Element = variant === 'heading' ? 'h2' : variant === 'subheading' ? 'h3' : 'p';
 
   return (

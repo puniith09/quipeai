@@ -1,11 +1,3 @@
-/**
- * Search API Test
- * 
- * Tests the /api/search endpoint with real Supermemory data.
- * 
- * Run with:
- *   SUPERMEMORY_API_KEY=your_key npx tsx src/app/api/search/test-search-api.ts
- */
 
 import { addMemory } from '@/lib/supermemory/client';
 import { getZoneForCoordinates } from '@/lib/supermemory/zone-utils';
@@ -14,10 +6,8 @@ async function testSearchAPI() {
   console.log('🧪 Testing Search API\n');
   console.log('='.repeat(60));
 
-  // Use current time so zones match
   const testDate = new Date();
 
-  // Step 1: Add test businesses
   console.log('\n📍 STEP 1: Adding Test Businesses');
   console.log('-'.repeat(60));
 
@@ -91,13 +81,11 @@ async function testSearchAPI() {
     console.log(`   ✅ Added: ${result.id} (${result.status})`);
   }
 
-  // Step 2: Wait for indexing
   console.log('\n⏳ STEP 2: Waiting for Indexing (10 seconds)');
   console.log('-'.repeat(60));
   await new Promise(resolve => setTimeout(resolve, 10000));
   console.log('   ✅ Ready for testing');
 
-  // Step 3: Test searches
   console.log('\n🔍 STEP 3: Testing Search Queries');
   console.log('-'.repeat(60));
 
@@ -148,12 +136,11 @@ async function testSearchAPI() {
       console.log(`   Zones searched: ${data.zones.length}`);
 
       if (data.results && data.results.length > 0) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        data.results.forEach((result: any, i: number) => {
+        data.results.forEach((result: Record<string, unknown>, i: number) => {
           console.log(`\n      ${i + 1}. ${result.name}`);
           console.log(`         Type: ${result.type}, Price: ₹${result.price}`);
           console.log(`         Rating: ${result.rating}⭐`);
-          console.log(`         Match Score: ${(result.matchScore * 100).toFixed(1)}%`);
+          console.log(`         Match Score: ${((result.matchScore as number) * 100).toFixed(1)}%`);
           console.log(`         Zone: ${result.zone}`);
         });
       }
@@ -169,7 +156,6 @@ async function testSearchAPI() {
     }
   }
 
-  // Step 4: Test POST endpoint
   console.log('\n📤 STEP 4: Testing POST Endpoint');
   console.log('-'.repeat(60));
 
@@ -203,7 +189,6 @@ async function testSearchAPI() {
     console.log(`   ❌ POST request failed:`, error instanceof Error ? error.message : error);
   }
 
-  // Summary
   console.log('\n' + '='.repeat(60));
   console.log('📊 TEST SUMMARY');
   console.log('='.repeat(60));
@@ -216,7 +201,6 @@ async function testSearchAPI() {
   console.log('='.repeat(60));
 }
 
-// Run tests
 testSearchAPI()
   .then(() => {
     console.log('\n✅ All tests completed');

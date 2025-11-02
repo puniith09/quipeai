@@ -4,13 +4,8 @@ import { verifyToken } from '@/lib/auth/jwt';
 import { getUserById } from '@/lib/auth/user-store';
 import { logger } from '@/lib/logger';
 
-/**
- * GET /api/auth/me
- * Returns the currently authenticated user from the HttpOnly cookie
- */
 export async function GET(request: NextRequest) {
   try {
-    // Get token from HttpOnly cookie
     const token = await getAuthCookie();
     
     logger.info('🔐 /api/auth/me called - Token present:', !!token);
@@ -22,7 +17,6 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    // Verify the token
     const payload = await verifyToken(token);
     
     if (!payload) {
@@ -32,7 +26,6 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    // Get user from database
     const user = await getUserById(payload.userId);
     
     if (!user) {

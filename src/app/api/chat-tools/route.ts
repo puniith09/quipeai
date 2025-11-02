@@ -6,15 +6,6 @@ import { addMemory } from '@/lib/supermemory/client';
 import { getZoneForCoordinates } from '@/lib/supermemory/zone-utils';
 import { logger } from '@/lib/logger';
 
-/**
- * Chat API with AI Tool Calling
- * 
- * The AI intelligently decides when to:
- * 1. Remember information (addMemory)
- * 2. Search for businesses (searchBusinesses)
- * 
- * No hardcoded keywords - pure semantic understanding.
- */
 
 interface ChatRequest {
   messages: CoreMessage[];
@@ -37,7 +28,6 @@ export async function POST(request: NextRequest) {
     const userId = body.userId || 'anonymous';
     const userLocation = body.location;
 
-    // System message
     const systemMessage: CoreMessage = {
       role: 'system',
       content: `You are QuipeAI, a conversational assistant that helps users discover local businesses and services.
@@ -67,7 +57,6 @@ Be natural and conversational. Don't announce when you're using tools unless rel
 
     const messages = [systemMessage, ...body.messages];
 
-    // Stream with tools
     const result = streamText({
       model: openai('gpt-4o-mini'),
       messages,

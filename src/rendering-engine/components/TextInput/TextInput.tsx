@@ -81,7 +81,6 @@ export const TextInput: React.FC<TextInputProps> = ({
     logger.log('TextInput submit:', { action, value, submitMessage });
     
     if (onSubmit) {
-      // If submitMessage is provided, use it instead of the input value
       await onSubmit(value, submitMessage);
     }
     

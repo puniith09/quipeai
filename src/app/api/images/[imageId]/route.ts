@@ -2,11 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { deleteImage, getImageDetails } from '@/lib/cloudflare-images';
 import { logger } from '@/lib/logger';
 
-/**
- * GET /api/images/[imageId]
- * 
- * Get image details by ID
- */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ imageId: string }> }
@@ -38,11 +33,6 @@ export async function GET(
   }
 }
 
-/**
- * DELETE /api/images/[imageId]
- * 
- * Delete an image from Cloudflare
- */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ imageId: string }> }

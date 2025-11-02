@@ -3,7 +3,7 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  --app-height: 100vh; /* Fallback, will be set by JS */
+  --app-height: 100vh;
 }
 
 @theme inline {
@@ -14,7 +14,7 @@
 
 html {
   height: 100vh;
-  height: 100dvh; /* Dynamic viewport height - adjusts with browser UI */
+  height: 100dvh;
   height: -webkit-fill-available;
 }
 
@@ -56,7 +56,6 @@ body {
   animation: scroll 15s linear infinite;
 }
 
-/* Hide scrollbar for carousel */
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -66,14 +65,12 @@ body {
   display: none;
 }
 
-/* Ensure inputs and interactive elements are above mobile browser UI */
 @supports (padding: max(0px)) {
   .safe-bottom {
     padding-bottom: max(env(safe-area-inset-bottom), 20px);
   }
 }
 
-/* Prevent iOS Safari from shrinking viewport when keyboard shows */
 @supports (-webkit-touch-callout: none) {
   html {
     height: -webkit-fill-available;

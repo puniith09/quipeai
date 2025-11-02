@@ -1,14 +1,3 @@
-/**
- * Test Chat with AI Tool Calling
- * 
- * Tests the AI's ability to:
- * 1. Detect when to remember information
- * 2. Automatically add businesses to Supermemory graph
- * 3. Search for businesses
- * 
- * Run with:
- *   SUPERMEMORY_API_KEY=your_key OPENROUTER_API_KEY=your_key npx tsx src/app/api/chat-tools/test-chat-tools.ts
- */
 
 async function testChatTools() {
   console.log('🧪 Testing AI Tool Calling\n');
@@ -18,7 +7,6 @@ async function testChatTools() {
   const userId = 'test_user_ai';
   const location = { lat: 17.4326, lng: 78.4487 }; // Banjara Hills
 
-  // Test 1: AI should detect business info and remember it
   console.log('\n📍 TEST 1: Business Registration (AI decides to remember)');
   console.log('-'.repeat(60));
   
@@ -62,11 +50,9 @@ async function testChatTools() {
     console.log('   ❌ Error:', error instanceof Error ? error.message : error);
   }
 
-  // Wait a bit for indexing
   console.log('\n⏳ Waiting 8 seconds for indexing...');
   await new Promise(resolve => setTimeout(resolve, 8000));
 
-  // Test 2: AI should search when user asks
   console.log('\n🔍 TEST 2: Search Request (AI decides to search)');
   console.log('-'.repeat(60));
 
@@ -110,7 +96,6 @@ async function testChatTools() {
     console.log('   ❌ Error:', error instanceof Error ? error.message : error);
   }
 
-  // Test 3: Casual conversation (no tools)
   console.log('\n💬 TEST 3: Casual Chat (No tools needed)');
   console.log('-'.repeat(60));
 

@@ -2,14 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { uploadImage, validateImageFile } from '@/lib/cloudflare-images';
 import { logger } from '@/lib/logger';
 
-/**
- * POST /api/images/upload
- * 
- * Upload an image to Cloudflare Images CDN
- * 
- * Request: multipart/form-data with 'file' field
- * Response: Image metadata with CDN URLs
- */
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -22,7 +14,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file
     const validation = validateImageFile(file);
     if (!validation.valid) {
       return NextResponse.json(
@@ -31,7 +22,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Extract optional metadata
     const alt = formData.get('alt') as string | null;
     const tags = formData.get('tags') as string | null;
 
@@ -40,7 +30,6 @@ export async function POST(request: NextRequest) {
       tags: tags ? tags.split(',').map(t => t.trim()) : undefined,
     };
 
-    // Upload to Cloudflare
     logger.info('Uploading image to Cloudflare', { filename: file.name, size: file.size });
 
     const imageData = await uploadImage(file, metadata);
@@ -62,11 +51,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * GET /api/images/upload
- * 
- * Returns API documentation
- */
 export async function GET() {
   return NextResponse.json({
     endpoint: '/api/images/upload',

@@ -1,9 +1,3 @@
-/**
- * Search API Endpoint
- * 
- * Integrates Supermemory spatiotemporal discovery with QuipeAI chat.
- * Searches for businesses in the user's current zone with semantic matching.
- */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
@@ -15,9 +9,6 @@ import {
   calculateAdaptiveGridSize,
 } from '@/lib/supermemory/zone-utils';
 
-/**
- * Search request interface
- */
 interface SearchRequest {
   query: string;
   location?: {
@@ -37,9 +28,6 @@ interface SearchRequest {
   includeNeighbors?: boolean; // Search neighboring zones too
 }
 
-/**
- * Search result interface
- */
 interface SearchResult {
   id: string;
   businessId: string;
@@ -59,12 +47,6 @@ interface SearchResult {
   zone: string;
 }
 
-/**
- * Search API endpoint
- * 
- * GET /api/search?q=salon&lat=17.4326&lng=78.4487&type=salon&maxPrice=600
- * POST /api/search with JSON body
- */
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -132,9 +114,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * Handle search logic
- */
 async function handleSearch(searchRequest: SearchRequest): Promise<NextResponse> {
   const {
     query,
@@ -149,28 +128,22 @@ async function handleSearch(searchRequest: SearchRequest): Promise<NextResponse>
   logger.info('Search request', { query, location, userId, filters, limit });
 
   try {
-    // Step 1: Determine zones to search
     let zonesToSearch: string[] = [];
 
     if (userId && !location) {
-      // Use user context to resolve zones
       logger.debug('👤', 'Resolving zones for user', { userId });
       
-      // For now, if no location provided, return error
-      // In production, you'd fetch user's last known location or home zone
       return NextResponse.json(
         { error: 'Location is required when userId is not associated with a stored location' },
         { status: 400 }
       );
     } else if (location) {
-      // Calculate zone from location
       const gridSize = calculateAdaptiveGridSize(location.lat, location.lng);
       const normalized = normalizeToGridCenter(location.lat, location.lng, gridSize);
       const currentZone = getZoneForCoordinates(location.lat, location.lng);
       
       zonesToSearch.push(currentZone);
 
-      // Include neighboring zones if requested (for boundary searches)
       if (includeNeighbors) {
         const neighbors = getNeighboringZones(normalized.lat, normalized.lng, gridSize);
         zonesToSearch = neighbors; // This includes center + 8 neighbors
@@ -188,7 +161,6 @@ async function handleSearch(searchRequest: SearchRequest): Promise<NextResponse>
       );
     }
 
-    // Step 2: Build Supermemory filters
     const supermemoryFilters: SearchFilters = { AND: [] };
 
     if (filters?.type && supermemoryFilters.AND) {
@@ -232,7 +204,6 @@ async function handleSearch(searchRequest: SearchRequest): Promise<NextResponse>
       });
     }
 
-    // Step 3: Search in Supermemory
     console.log('🔍 Calling Supermemory API:', {
       query,
       zones: zonesToSearch,
@@ -250,33 +221,34 @@ async function handleSearch(searchRequest: SearchRequest): Promise<NextResponse>
     console.log('📦 Supermemory API Response:', JSON.stringify({ 
       resultsCount: results.length,
       zones: zonesToSearch.length,
-      rawResults: results // Full response from Supermemory
+      rawResults: results
     }, null, 2));
 
-    // Step 4: Transform results
-    const transformedResults: SearchResult[] = results.map((result) => ({
-      id: result.id || '',
-      businessId: result.metadata?.businessId as string || '',
-      name: result.metadata?.businessName as string || 'Unknown Business',
-      type: result.metadata?.type as string || '',
-      description: result.content || '',
-      price: result.metadata?.price as number | undefined,
-      rating: result.metadata?.rating as number | undefined,
-      address: result.metadata?.address as string | undefined,
-      phone: result.metadata?.phone as string | undefined,
-      services: Array.isArray(result.metadata?.services) 
-        ? result.metadata.services as string[]
-        : [],
-      amenities: Array.isArray(result.metadata?.amenities)
-        ? result.metadata.amenities as string[]
-        : [],
-      verified: result.metadata?.verified as boolean || false,
-      imageUrl: result.metadata?.imageUrl as string | undefined,
-      matchScore: result.score || 0,
-      zone: result.containerTags?.[0] || '',
-    }));
+    const transformedResults: SearchResult[] = results.map((result) => {
+      const r = result as { id?: string; content?: string; metadata?: Record<string, unknown> };
+      return {
+        id: r.id || '',
+        businessId: r.metadata?.businessId as string || '',
+        name: r.metadata?.businessName as string || 'Unknown Business',
+        type: r.metadata?.type as string || '',
+        description: r.content || '',
+        price: r.metadata?.price as number | undefined,
+        rating: r.metadata?.rating as number | undefined,
+        address: r.metadata?.address as string | undefined,
+        phone: r.metadata?.phone as string | undefined,
+        services: Array.isArray(r.metadata?.services) 
+          ? r.metadata.services as string[]
+          : [],
+        amenities: Array.isArray(r.metadata?.amenities)
+          ? r.metadata.amenities as string[]
+          : [],
+        verified: r.metadata?.verified as boolean || false,
+        imageUrl: r.metadata?.imageUrl as string | undefined,
+        matchScore: (r as { score?: number }).score || 0,
+        zone: (r as { containerTags?: string[] }).containerTags?.[0] || '',
+      };
+    });
 
-    // Step 5: Apply post-processing filters (services, etc.)
     let filteredResults = transformedResults;
 
     if (filters?.services && filters.services.length > 0) {
@@ -287,7 +259,6 @@ async function handleSearch(searchRequest: SearchRequest): Promise<NextResponse>
       );
     }
 
-    // Step 6: Return results
     return NextResponse.json({
       success: true,
       query,
@@ -296,7 +267,6 @@ async function handleSearch(searchRequest: SearchRequest): Promise<NextResponse>
       results: filteredResults,
       count: filteredResults.length,
       timestamp: new Date().toISOString(),
-      // Debug: Include raw Supermemory response
       debug: {
         supermemoryRawResults: results,
         supermemoryResultsCount: results.length,

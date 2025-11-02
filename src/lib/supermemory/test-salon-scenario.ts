@@ -1,19 +1,3 @@
-/**
- * Salon Scenario Test
- * 
- * Tests the complete spatiotemporal zone system with a realistic salon discovery scenario.
- * 
- * Scenario:
- * 1. Business Owner: Onboards "Amazing Hair Studio" in Banjara Hills, Hyderabad
- * 2. User Sarah: Opens QuipeAI at 14:30, searches for "affordable salon haircut"
- * 3. System: Resolves Sarah's zone, searches spatiotemporal graph
- * 4. User Sarah: Views salon details, books appointment
- * 5. System: Tracks interaction, updates user context
- * 6. Time: 6 hours pass, zone expires, cleanup runs
- * 
- * Run with:
- *   SUPERMEMORY_API_KEY=your_key npx tsx src/lib/supermemory/test-salon-scenario.ts
- */
 
 import {
   addMemory,
@@ -50,12 +34,8 @@ async function runSalonScenario() {
   console.log('Scenario: Salon owner onboards business → Customer searches → Discovery!');
   console.log('='.repeat(60));
 
-  // Clear cache for fresh test
   clearZoneCache();
 
-  // ============================================================================
-  // BUSINESS OWNER PERSPECTIVE: Onboarding
-  // ============================================================================
   console.log('\n�‍💼 BUSINESS OWNER PERSPECTIVE: Rajesh (Salon Owner)');
   console.log('='.repeat(60));
   console.log('Rajesh owns "Amazing Hair Studio" in Banjara Hills');
@@ -92,7 +72,6 @@ async function runSalonScenario() {
     verified: true,
   };
 
-  // Calculate zone for business location
   const businessGridSize = calculateAdaptiveGridSize(
     businessLocation.lat,
     businessLocation.lng,
@@ -108,7 +87,6 @@ async function runSalonScenario() {
   );
   console.log(`   Normalized to grid: ${businessNormalized.lat}, ${businessNormalized.lng}`);
 
-  // Create zone for business (lazy loading)
   const businessZone = getOrCreateZone(
     businessNormalized.lat,
     businessNormalized.lng,
@@ -118,7 +96,6 @@ async function runSalonScenario() {
   console.log(`   Zone created: ${businessZone.tag}`);
   console.log(`   Expires at: ${businessZone.expiresAt.toISOString()}`);
 
-  // Add business to Supermemory
   const businessContent = `${businessData.name} - ${businessData.description}\nServices: ${businessData.services.join(', ')}\nLocation: ${businessData.address}`;
 
   const businessMemory = await addMemory(
@@ -143,13 +120,11 @@ async function runSalonScenario() {
   console.log(`\n   💬 Rajesh: "Great! My salon is now on QuipeAI."`);
   console.log(`   💬 Rajesh: "Now customers searching nearby can discover us!"`);
 
-  // Wait for indexing (Supermemory async processing)
   console.log(`\n   ⏳ System: Indexing business in spatiotemporal zone...`);
   console.log(`      Zone: ${businessZone.tag}`);
   console.log(`      This happens in the background while Rajesh continues working`);
   console.log(`      (Usually takes 10-30 seconds)`);
   
-  // Poll until indexed (with timeout)
   let indexed = false;
   let attempts = 0;
   const maxAttempts = 15; // 30 seconds max
@@ -158,7 +133,6 @@ async function runSalonScenario() {
     await new Promise(resolve => setTimeout(resolve, 2000));
     attempts++;
     
-    // Try to search for the business
     const testSearch = await searchMemories(
       businessData.name,
       [businessZone.tag],
@@ -179,9 +153,6 @@ async function runSalonScenario() {
     console.log(`      Note: This is a Supermemory processing delay, not a system issue`);
   }
 
-  // ============================================================================
-  // CUSTOMER PERSPECTIVE: Discovery
-  // ============================================================================
   console.log('\n\n👩‍💼 CUSTOMER PERSPECTIVE: Sarah (Looking for a Salon)');
   console.log('='.repeat(60));
   console.log('Sarah is new to Banjara Hills and needs a haircut');
@@ -202,7 +173,6 @@ async function runSalonScenario() {
   console.log(`   ⏰ Time: ${currentTime.toISOString()}`);
   console.log(`\n   💬 Sarah: "Let me search for salons nearby..."`);
 
-  // Initialize user context
   const userInit = await initializeUserContext(userId, {
     preferences: {
       favoriteCategories: ['beauty', 'wellness'],
@@ -212,11 +182,9 @@ async function runSalonScenario() {
   });
   console.log(`   ✅ Profile created (first-time user)`);
 
-  // Set user's home zone (use business zone for this test so they match)
   await setUserHomeZone(userId, businessLocation.lat, businessLocation.lng);
   console.log(`   ✅ Location permission granted`);
 
-  // Manually calculate user's zone with the SAME date as business
   const userGridSize = calculateAdaptiveGridSize(businessLocation.lat, businessLocation.lng);
   const userNormalized = normalizeToGridCenter(businessLocation.lat, businessLocation.lng, userGridSize);
   const userZoneTag = getZoneContainerTag(userNormalized.lat, userNormalized.lng, userGridSize, currentTime);
@@ -224,9 +192,6 @@ async function runSalonScenario() {
   
   console.log(`   🗺️  System: Calculated Sarah's zone: ${userZoneTag}`);
 
-  // ============================================================================
-  // CUSTOMER PERSPECTIVE: Search & Discovery
-  // ============================================================================
   console.log('\n🔍 STEP 3: Sarah Searches for Salons');
   console.log('-'.repeat(60));
 
@@ -269,19 +234,19 @@ async function runSalonScenario() {
   console.log(`\n   ✨ SUCCESS! Sarah discovered salons:`);
   if (searchResults.length > 0) {
     searchResults.forEach((result, i) => {
-      console.log(`\n   ${i + 1}. ${result.metadata?.businessName || 'Unknown'}`);
-      console.log(`      💰 Price: ₹${result.metadata?.price}`);
-      console.log(`      ⭐ Rating: ${result.metadata?.rating}/5`);
-      console.log(`      ✂️  Services: ${result.metadata?.services?.slice(0, 3).join(', ')}${result.metadata?.services?.length > 3 ? '...' : ''}`);
-      console.log(`      📍 Address: ${result.metadata?.address}`);
-      console.log(`      🎯 Match score: ${(result.score * 100).toFixed(1)}%`);
+      const r = result as { metadata?: Record<string, unknown>; score?: number };
+      console.log(`\n   ${i + 1}. ${r.metadata?.businessName || 'Unknown'}`);
+      console.log(`      💰 Price: ₹${r.metadata?.price}`);
+      console.log(`      ⭐ Rating: ${r.metadata?.rating}/5`);
+      console.log(`      ✂️  Services: ${(r.metadata?.services as string[] | undefined)?.slice(0, 3).join(', ')}${(r.metadata?.services as string[] | undefined)?.length ?? 0 > 3 ? '...' : ''}`);
+      console.log(`      📍 Address: ${r.metadata?.address}`);
+      console.log(`      🎯 Match score: ${((r.score || 0) * 100).toFixed(1)}%`);
     });
     
     console.log(`\n   💬 Sarah: "Perfect! Amazing Hair Studio looks good."`);
     console.log(`   💬 Sarah: "₹500 for a haircut is within my budget!"`);
   }
 
-  // Record search interaction
   await updateUserContext(userId, {
     type: 'search',
     searchQuery,
@@ -289,23 +254,19 @@ async function runSalonScenario() {
     location: userLocation,
   });
 
-  // ============================================================================
-  // CUSTOMER PERSPECTIVE: Booking
-  // ============================================================================
-  console.log('\n� STEP 4: Sarah Views Details and Books Appointment');
+  console.log('\n🔍 STEP 4: Sarah Views Details and Books Appointment');
   console.log('-'.repeat(60));
 
   if (searchResults.length > 0) {
-    const selectedBusiness = searchResults[0];
+    const selectedBusiness = searchResults[0] as { metadata?: Record<string, unknown> };
     console.log(`   👁️  Sarah taps on: ${selectedBusiness.metadata?.businessName}`);
     console.log(`   📖 Reading reviews and checking photos...`);
 
-    // Record view interaction
     await updateUserContext(userId, {
       type: 'view',
       businessId: businessData.id,
       businessType: businessData.type,
-      timestamp: new Date(currentTime.getTime() + 2 * 60 * 1000), // 2 minutes later
+      timestamp: new Date(currentTime.getTime() + 2 * 60 * 1000),
       location: userLocation,
     });
 
@@ -313,7 +274,6 @@ async function runSalonScenario() {
     console.log(`   📅 Sarah selects: Tomorrow at 4:00 PM`);
     console.log(`   💇 Service: Haircut (₹500)`);
 
-    // Record booking interaction
     await updateUserContext(userId, {
       type: 'booking',
       businessId: businessData.id,
@@ -333,9 +293,6 @@ async function runSalonScenario() {
     console.log(`\n   💬 Sarah: "Awesome! Looking forward to my haircut tomorrow!"`);
   }
 
-  // ============================================================================
-  // BUSINESS OWNER PERSPECTIVE: Success
-  // ============================================================================
   console.log('\n\n👨‍💼 BUSINESS OWNER PERSPECTIVE: Rajesh Gets a Customer!');
   console.log('='.repeat(60));
   console.log(`   📲 *Notification on Rajesh's phone*`);
@@ -343,9 +300,6 @@ async function runSalonScenario() {
   console.log(`   💬 Rajesh: "Great! QuipeAI is already bringing customers!"`);
   console.log(`   🎉 First customer acquired through spatiotemporal discovery!`);
 
-  // ============================================================================
-  // SYSTEM PERSPECTIVE: Analytics
-  // ============================================================================
   console.log('\n\n📊 STEP 5: System Analytics');
   console.log('='.repeat(60));
 
@@ -369,9 +323,6 @@ async function runSalonScenario() {
   console.log(`      Bookings: 1`);
   console.log(`      Conversion rate: 100%`);
 
-  // ============================================================================
-  // SYSTEM PERSPECTIVE: Zone Cleanup (6 hours later)
-  // ============================================================================
   console.log('\n\n⏰ STEP 6: Zone Lifecycle - Cleanup (6 Hours Later)');
   console.log('='.repeat(60));
 
@@ -379,7 +330,6 @@ async function runSalonScenario() {
   console.log(`   📅 Created at: ${businessZone.createdAt.toISOString()}`);
   console.log(`   ⌛ Expires at: ${businessZone.expiresAt.toISOString()}`);
 
-  // Simulate time passing (6 hours later)
   const futureTime = new Date(currentTime.getTime() + 6.5 * 60 * 60 * 1000);
   console.log(`   ⏭️  Time jump: ${futureTime.toISOString()} (6.5 hours later)`);
 
@@ -403,9 +353,6 @@ async function runSalonScenario() {
     }
   }
 
-  // ============================================================================
-  // VERIFICATION: User Data Persists
-  // ============================================================================
   console.log('\n✅ STEP 7: Verification - User Data Persistence');
   console.log('-'.repeat(60));
 
@@ -415,9 +362,6 @@ async function runSalonScenario() {
   console.log(`   🔍 Checking Sarah's data after zone cleanup...`);
   console.log(`   ✅ User profile exists: ${userProfileAfterCleanup ? 'YES' : 'PENDING (async)'}`);
 
-  // ============================================================================
-  // Summary
-  // ============================================================================
   console.log('\n\n' + '='.repeat(60));
   console.log('🎉 COMPLETE SPATIOTEMPORAL DISCOVERY FLOW');
   console.log('='.repeat(60));
@@ -437,7 +381,7 @@ async function runSalonScenario() {
   console.log('\n🔧 SYSTEM PERFORMANCE:');
   console.log(`   ✅ Business indexed: 4 seconds`);
   console.log(`   ✅ Search results: ${searchResults.length} found`);
-  console.log(`   ✅ Match relevance: ${(searchResults[0].score * 100).toFixed(1)}%`);
+  console.log(`   ✅ Match relevance: ${((searchResults[0] as { score?: number }).score || 0 * 100).toFixed(1)}%`);
   console.log(`   ✅ Zone lifecycle: Create → Use → Expire → Cleanup`);
   console.log(`   ✅ Active zones: ${getActiveZonesCount()}`);
   console.log(`   ✅ User data: Persistent`);
@@ -451,7 +395,7 @@ async function runSalonScenario() {
   console.log(`   ✓ Discovery worked (business → customer connection)`);
   console.log(`   ✓ Spatial matching correct (same zone)`);
   console.log(`   ✓ Temporal efficiency (6hr windows)`);
-  console.log(`   ✓ Semantic search accurate (${(searchResults[0].score * 100).toFixed(1)}% match)`);
+  console.log(`   ✓ Semantic search accurate (${((searchResults[0] as { score?: number }).score || 0 * 100).toFixed(1)}% match)`);
   console.log(`   ✓ Conversion achieved (search → booking)`);
   
   console.log('\n' + '='.repeat(60));
@@ -459,7 +403,6 @@ async function runSalonScenario() {
   console.log('='.repeat(60));
 }
 
-// Run the scenario
 runSalonScenario()
   .then(() => {
     console.log('\n✅ All tests passed!');

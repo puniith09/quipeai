@@ -5,10 +5,6 @@ import { COMPONENT_REGISTRY, isValidComponentType } from './registry';
 import type { ComponentNode } from './types';
 import { logger } from '@/lib/logger';
 
-/**
- * Recursively renders components based on JSON structure
- * Supports nested components of unlimited depth
- */
 export const renderComponent = (
   node: ComponentNode,
   index: number = 0,
@@ -16,7 +12,6 @@ export const renderComponent = (
   onTextInputSubmit?: (value: string, action?: string, submitMessage?: string) => void,
   onTextInputChange?: (value: string, action?: string) => void
 ): React.ReactNode => {
-  // Validate component type
   if (!isValidComponentType(node.type)) {
     const availableTypes = Object.keys(COMPONENT_REGISTRY).join(', ');
     logger.error(`Unknown component type: "${node.type}". Available types: ${availableTypes}`);
@@ -29,33 +24,28 @@ export const renderComponent = (
     );
   }
 
-  // Get the component from registry
   const Component = COMPONENT_REGISTRY[node.type];
 
-  // Recursively render children
   const children = node.children?.map((child, childIndex) =>
     renderComponent(child, childIndex, onButtonClick, onTextInputSubmit, onTextInputChange)
   );
 
-  // Add onClick handler for buttons and onSubmit handler for text inputs
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const props: any = { ...(node.props || {}) };
+  const props: Record<string, unknown> = { ...(node.props || {}) };
   
   if (node.type === 'button' && onButtonClick) {
-    props.onClick = () => onButtonClick(props.label || '', props.action, props.message);
+    props.onClick = () => onButtonClick(props.label as string || '', props.action as string, props.message as string);
   }
   
   if (node.type === 'textinput') {
     if (onTextInputSubmit) {
       props.onSubmit = (value: string, submitMessage?: string) => 
-        onTextInputSubmit(value, props.action, submitMessage);
+        onTextInputSubmit(value, props.action as string | undefined, submitMessage);
     }
     if (onTextInputChange) {
-      props.onChange = (value: string) => onTextInputChange(value, props.action);
+      props.onChange = (value: string) => onTextInputChange(value, props.action as string | undefined);
     }
   }
 
-  // Render the component with props and children
   return (
     <Component key={node.id || index} {...props}>
       {children}

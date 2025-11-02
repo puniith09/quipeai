@@ -16,7 +16,6 @@ export default function Home() {
   const [isAtTop, setIsAtTop] = useState(true);
   const [viewportHeight, setViewportHeight] = useState('100vh');
 
-  // Set actual viewport height for mobile browsers
   useEffect(() => {
     const setVH = () => {
       const vh = window.innerHeight;
@@ -26,7 +25,6 @@ export default function Home() {
 
     setVH();
     
-    // Update on resize but not on scroll (which changes innerHeight on mobile)
     let resizeTimer: NodeJS.Timeout;
     const handleResize = () => {
       clearTimeout(resizeTimer);
@@ -42,18 +40,14 @@ export default function Home() {
   }, []);
 
   const handleSettingsClick = useCallback(() => {
-    // TODO: Implement settings functionality
   }, []);
 
   const handleSearchClick = useCallback(() => {
-    // TODO: Implement search functionality
   }, []);
 
   const handleSendMessage = useCallback((message: string) => {
-    // Send message through the ChatWindow
     chatWindowRef.current?.sendMessage(message);
     
-    // Auto-expand on first message
     if (!hasMessages) {
       setHasMessages(true);
       setIsExpanded(true);
@@ -63,7 +57,7 @@ export default function Home() {
   const handleChatScroll = useCallback(() => {
     if (chatScrollRef.current) {
       const { scrollTop } = chatScrollRef.current;
-      setIsAtTop(scrollTop <= 5); // Consider at top if within 5px
+      setIsAtTop(scrollTop <= 5);
     }
   }, []);
 
@@ -77,21 +71,17 @@ export default function Home() {
     if (!isDragging) return;
     
     const currentY = e.touches[0].clientY;
-    const diff = currentY - dragStartY; // Positive when dragging down, negative when dragging up
+    const diff = currentY - dragStartY;
     
-    // Calculate max drag distance (200px = distance between collapsed and expanded)
     const maxDrag = 200;
     
-    // Check if we should allow header swipe
     const shouldAllowSwipe = !hasMessages || (isAtTop && diff > 0) || (!isExpanded && diff < 0);
     
     if (!shouldAllowSwipe) return;
     
-    // When expanded: allow dragging down (positive diff)
-    // When collapsed: allow dragging up (negative diff)
     if (isExpanded && diff > 0 && diff <= maxDrag) {
       setCurrentTranslate(diff);
-      e.preventDefault(); // Prevent scroll when swiping header
+      e.preventDefault();
     } else if (!isExpanded && diff < 0 && diff >= -maxDrag) {
       setCurrentTranslate(diff);
       e.preventDefault();
@@ -100,12 +90,11 @@ export default function Home() {
 
   const handleTouchEnd = useCallback(() => {
     setIsDragging(false);
-    // If dragged more than 50px, toggle state
     if (Math.abs(currentTranslate) > 50) {
       if (currentTranslate < 0) {
-        setIsExpanded(true); // Dragged up
+        setIsExpanded(true);
       } else {
-        setIsExpanded(false); // Dragged down
+        setIsExpanded(false);
       }
     }
     setCurrentTranslate(0);
@@ -120,13 +109,10 @@ export default function Home() {
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
-      {/* Header Section */}
       <Header onSettingsClick={handleSettingsClick} />
 
-      {/* Suggestions Section */}
       <Suggestions announcementMessage="Indian Railways extends Covid guidelines, doing thermal screening of passengers" />
 
-      {/* Messaging Section */}
       <Messaging
         isExpanded={isExpanded}
         isDragging={isDragging}

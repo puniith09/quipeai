@@ -1,13 +1,3 @@
-/**
- * Cloudflare Images API Client
- * 
- * Handles image uploads, deletions, and URL generation for QuipeAI.
- * Uses Cloudflare Images for CDN storage with unlimited transforms.
- * 
- * Pricing: $5/100k images stored, $1/100k deliveries
- * Features: Auto-optimization, resizing, format conversion, WebP/AVIF
- */
-
 const CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const CLOUDFLARE_API_TOKEN = process.env.CLOUDFLARE_IMAGES_API_TOKEN;
 
@@ -17,9 +7,6 @@ if (!CLOUDFLARE_ACCOUNT_ID || !CLOUDFLARE_API_TOKEN) {
 
 const BASE_URL = `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/images/v1`;
 
-/**
- * Upload Image Response from Cloudflare
- */
 export interface CloudflareImageUploadResponse {
   success: boolean;
   result?: {
@@ -33,9 +20,6 @@ export interface CloudflareImageUploadResponse {
   messages?: string[];
 }
 
-/**
- * Image Metadata for QuipeAI
- */
 export interface ImageMetadata {
   id: string;
   filename: string;
@@ -48,13 +32,6 @@ export interface ImageMetadata {
   };
 }
 
-/**
- * Upload an image to Cloudflare Images
- * 
- * @param file - File object or Buffer
- * @param metadata - Optional metadata (alt text, tags)
- * @returns Image metadata with CDN URLs
- */
 export async function uploadImage(
   file: File | Buffer,
   metadata?: { alt?: string; tags?: string[] }
@@ -63,16 +40,13 @@ export async function uploadImage(
     const formData = new FormData();
 
     if (Buffer.isBuffer(file)) {
-      // Convert Buffer to Blob via Uint8Array for FormData compatibility
       const uint8Array = new Uint8Array(file);
       const blob = new Blob([uint8Array], { type: 'application/octet-stream' });
       formData.append('file', blob, 'image.jpg');
     } else {
-      // File object from browser
       formData.append('file', file, file.name);
     }
 
-    // Add metadata as JSON
     if (metadata) {
       formData.append('metadata', JSON.stringify(metadata));
     }
@@ -93,7 +67,6 @@ export async function uploadImage(
       );
     }
 
-    // Generate variant URLs
     const baseUrl = `https://imagedelivery.net/${CLOUDFLARE_ACCOUNT_ID}/${data.result.id}`;
 
     return {
@@ -113,12 +86,6 @@ export async function uploadImage(
   }
 }
 
-/**
- * Delete an image from Cloudflare Images
- * 
- * @param imageId - Cloudflare image ID
- * @returns Success status
- */
 export async function deleteImage(imageId: string): Promise<boolean> {
   try {
     const response = await fetch(`${BASE_URL}/${imageId}`, {
@@ -136,12 +103,6 @@ export async function deleteImage(imageId: string): Promise<boolean> {
   }
 }
 
-/**
- * Get image details from Cloudflare
- * 
- * @param imageId - Cloudflare image ID
- * @returns Image metadata
- */
 export async function getImageDetails(imageId: string): Promise<ImageMetadata | null> {
   try {
     const response = await fetch(`${BASE_URL}/${imageId}`, {
@@ -176,13 +137,6 @@ export async function getImageDetails(imageId: string): Promise<ImageMetadata | 
   }
 }
 
-/**
- * List all images (paginated)
- * 
- * @param page - Page number (default: 1)
- * @param perPage - Items per page (default: 100, max: 10000)
- * @returns Array of image metadata
- */
 export async function listImages(
   page: number = 1,
   perPage: number = 100
@@ -221,13 +175,6 @@ export async function listImages(
   }
 }
 
-/**
- * Generate optimized image URL with transformations
- * 
- * @param imageId - Cloudflare image ID
- * @param options - Transformation options
- * @returns Optimized CDN URL
- */
 export function getOptimizedImageUrl(
   imageId: string,
   options?: {
@@ -235,7 +182,7 @@ export function getOptimizedImageUrl(
     height?: number;
     fit?: 'scale-down' | 'contain' | 'cover' | 'crop' | 'pad';
     format?: 'auto' | 'avif' | 'webp' | 'json' | 'jpeg' | 'png';
-    quality?: number; // 1-100
+    quality?: number;
   }
 ): string {
   const baseUrl = `https://imagedelivery.net/${CLOUDFLARE_ACCOUNT_ID}/${imageId}`;
@@ -257,20 +204,12 @@ export function getOptimizedImageUrl(
   return `${baseUrl}/public${queryString}`;
 }
 
-/**
- * Validate image file before upload
- * 
- * @param file - File to validate
- * @returns Validation result
- */
 export function validateImageFile(file: File): {
   valid: boolean;
   error?: string;
 } {
-  // Max file size: 10MB
   const MAX_SIZE = 10 * 1024 * 1024;
 
-  // Allowed formats
   const ALLOWED_TYPES = [
     'image/jpeg',
     'image/jpg',

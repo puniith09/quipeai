@@ -12,10 +12,6 @@ interface ButtonInterpretRequest {
   recentMessages?: Message[];
 }
 
-/**
- * Button Interpret API
- * Uses AI to convert button clicks into natural user messages
- */
 export async function POST(request: NextRequest) {
   try {
     const apiKey = process.env.OPENROUTER_API_KEY;
@@ -36,14 +32,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Build context from recent messages
     const recentContext = body.recentMessages && body.recentMessages.length > 0
       ? body.recentMessages
           .map(msg => `${msg.role}: ${msg.content}`)
           .join('\n')
       : '';
 
-    // Create AI prompt for generating natural user message
     const systemPrompt = `You are a helpful assistant that converts UI button clicks into natural, conversational user messages.
 
 When a user clicks a button in a chat interface, generate a SHORT, natural message (3-8 words) that represents what the user wants to say.
@@ -67,7 +61,6 @@ Return ONLY the message text, nothing else.`;
       { role: 'user', content: userPrompt }
     ];
 
-    // Call OpenRouter API
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {

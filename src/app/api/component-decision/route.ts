@@ -21,10 +21,6 @@ interface DecisionResponse {
   locationContext?: string; // If user mentions specific area
 }
 
-/**
- * Component Decision API
- * Uses AI to determine if visual components are needed and which ones
- */
 export async function POST(request: NextRequest) {
   try {
     const apiKey = process.env.OPENROUTER_API_KEY;
@@ -45,17 +41,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get available components dynamically
     const availableComponents = getAvailableComponents();
 
-    // Build context from recent conversation
     const conversationHistory = body.conversationHistory || [];
     const recentMessages = conversationHistory
       .slice(-4)
       .map(msg => `${msg.role}: ${msg.content}`)
       .join('\n');
 
-    // Create AI prompt for decision
     const systemPrompt = `You are a smart assistant that analyzes user requests and extracts structured information.
 
 Available components: ${availableComponents.join(', ')}
@@ -100,7 +93,6 @@ IMPORTANT: Always extract searchQuery and businessType when user asks to find/se
       ])
     ];
 
-    // Call OpenRouter API
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -124,26 +116,21 @@ IMPORTANT: Always extract searchQuery and businessType when user asks to find/se
     const data = await response.json();
     const aiResponse = data.choices?.[0]?.message?.content || '';
 
-    // Parse AI response
     let decision: DecisionResponse;
     try {
-      // Remove markdown code blocks if present
       const jsonStr = aiResponse.replace(/```json\n?|\n?```/g, '').trim();
       decision = JSON.parse(jsonStr);
       
-      // Validate and ensure suggestedComponents is an array
       if (!Array.isArray(decision.suggestedComponents)) {
         decision.suggestedComponents = [];
       }
       
-      // Filter to only include available components
       decision.suggestedComponents = decision.suggestedComponents.filter(
         comp => availableComponents.includes(comp)
       );
       
       } catch (parseError) {
         logger.error('Failed to parse AI decision:', aiResponse, parseError);
-      // Fallback to simple text response
       decision = {
         needsComponent: false,
         reason: 'Parse error - defaulting to text response',

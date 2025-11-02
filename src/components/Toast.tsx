@@ -10,7 +10,7 @@ interface ToastProps {
   type?: 'success' | 'error' | 'warning';
 }
 
-const TOAST_DURATION = 1500; // 1.5 seconds
+const TOAST_DURATION = 1500;
 
 const TOAST_TYPES = {
   success: {
@@ -38,11 +38,8 @@ export const Toast: React.FC<ToastProps> = ({
 
   useEffect(() => {
     if (isVisible) {
-      // Trigger slide-in animation
       setAnimationClass('toast-slide-in');
 
-      // Only set auto-hide timer if duration is greater than 0
-      // Duration of 0 or negative means persistent toast
       if (duration > 0) {
         const timer = setTimeout(() => {
           hideToast();
@@ -72,7 +69,7 @@ export const Toast: React.FC<ToastProps> = ({
         right: 0,
         width: '100%',
         backgroundColor: TOAST_TYPES[type].backgroundColor,
-        borderRadius: '0 0 0 0', // Same as ChatHeader - rounded top corners only
+        borderRadius: '0 0 0 0',
         overflow: 'hidden',
         zIndex: 100,
       }}
@@ -80,11 +77,11 @@ export const Toast: React.FC<ToastProps> = ({
       <div 
         className="toast-content"
         style={{
-          paddingTop: '8px',    // py-2 = 8px top
-          paddingBottom: '8px', // py-2 = 8px bottom
-          paddingLeft: '20px',  // px-5 = 20px
-          paddingRight: '20px', // px-5 = 20px
-          minHeight: '60px',    // Minimum height to match header
+          paddingTop: '8px',
+          paddingBottom: '8px',
+          paddingLeft: '20px',
+          paddingRight: '20px',
+          minHeight: '60px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

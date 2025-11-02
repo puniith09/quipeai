@@ -11,10 +11,6 @@ interface VerifyOTPRequest {
   code: string;
 }
 
-/**
- * Verify OTP API
- * Verifies the OTP code for the provided phone number
- */
 export async function POST(request: NextRequest) {
   try {
     const apiKey = process.env.PRELUDE_API_KEY;
@@ -28,7 +24,6 @@ export async function POST(request: NextRequest) {
 
     const body: VerifyOTPRequest = await request.json();
     
-    // Validate inputs
     if (!body.phoneNumber || typeof body.phoneNumber !== 'string') {
       return NextResponse.json(
         { error: 'Invalid request: phoneNumber is required' },
@@ -43,7 +38,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Ensure phone number starts with +
     const phoneNumber = body.phoneNumber.trim();
     if (!phoneNumber.startsWith('+')) {
       return NextResponse.json(
@@ -52,7 +46,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check rate limit: 5 verification attempts per phone per 15 minutes
     const rateLimitKey = `otp:verify:${phoneNumber}`;
     const isAllowed = rateLimiter.check(
       rateLimitKey,
@@ -78,14 +71,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Initialize Prelude client
     const client = new Prelude({
       apiToken: apiKey,
     });
 
     logger.info('Verifying OTP for:', phoneNumber);
 
-    // Verify the code
     const check = await client.verification.check({
       target: {
         type: 'phone_number',
@@ -99,13 +90,10 @@ export async function POST(request: NextRequest) {
     if (check.status === 'success') {
       const verificationId = check.id || `verify_${Date.now()}`;
       
-      // 1. Generate user ID from phone number
       const userId = generateUserId(phoneNumber);
       
-      // 2. Create or update user in store
       const user = await createOrUpdateUser(userId, phoneNumber, verificationId);
       
-      // 3. Generate JWT token (30 days expiry) - only userId, no phone number
       const token = await generateToken({
         userId: user.id,
         verificationId: verificationId,
@@ -116,7 +104,6 @@ export async function POST(request: NextRequest) {
         sessionCount: user.sessionCount,
       });
       
-      // Create response with user data and token (no phone number)
       const response = NextResponse.json({
         success: true,
         verified: true,
@@ -130,7 +117,6 @@ export async function POST(request: NextRequest) {
         },
       });
       
-      // Set authentication token as HttpOnly cookie
       setAuthCookieInResponse(response, token);
       
       logger.info('🍪 Setting auth cookie in response', { userId: user.id, tokenLength: token.length });

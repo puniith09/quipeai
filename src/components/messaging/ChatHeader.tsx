@@ -19,7 +19,6 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({ onSearchClick }) => {
       'warning'
     );
     
-    // Call original handler if provided
     if (onSearchClick) {
       onSearchClick();
     }
@@ -27,7 +26,6 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({ onSearchClick }) => {
   
   return (
     <div className="relative px-5 py-2 bg-[#313131] rounded-t-[24px] cursor-grab active:cursor-grabbing overflow-hidden">
-      {/* Toast overlays inside ChatHeader */}
       <Toast
         message={message}
         type={toastType}
@@ -36,10 +34,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({ onSearchClick }) => {
         onHide={hideToast}
       />
       
-      {/* Centered drag bar */}
       <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 bg-gray-600 rounded-full z-10" />
       
-      {/* Header content */}
       <div className="flex items-center justify-between pt-2">
         <h1 className="text-white text-lg font-bold">Chat</h1>
         <div className="flex gap-3">

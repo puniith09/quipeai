@@ -1,4 +1,3 @@
-// Type definitions for the rendering engine
 
 export interface ComponentNode {
   type: string;
@@ -13,5 +12,4 @@ export interface RenderableComponent {
   children?: React.ReactNode;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type ComponentRegistry = Record<string, React.ComponentType<any>>;
+export type ComponentRegistry = Record<string, React.ComponentType<Record<string, unknown>>>;

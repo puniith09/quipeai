@@ -12,12 +12,10 @@ export const Suggestions: React.FC<SuggestionsProps> = ({
 }) => {
   return (
     <>
-      {/* Carousel Section */}
       <div className="flex-shrink-0" style={{ touchAction: 'pan-x' }}>
         <Carousel />
       </div>
 
-      {/* Announcement Ticker */}
       <div className="flex-shrink-0" style={{ touchAction: 'none' }}>
         <AnnouncementTicker message={announcementMessage} />
       </div>

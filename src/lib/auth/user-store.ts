@@ -1,7 +1,3 @@
-/**
- * User Store - Database-backed user storage using Prisma + PostgreSQL
- */
-
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 
@@ -13,9 +9,6 @@ export interface User {
   sessionCount: number;
 }
 
-/**
- * Create or update a user in the database
- */
 export async function createOrUpdateUser(
   userId: string,
   phoneNumber: string,

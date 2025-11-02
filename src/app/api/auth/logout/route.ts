@@ -2,10 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { deleteAuthCookieInResponse } from '@/lib/auth/cookies';
 import { logger } from '@/lib/logger';
 
-/**
- * POST /api/auth/logout
- * Clears the authentication cookie
- */
 export async function POST(request: NextRequest) {
   try {
     logger.info('User logging out');
@@ -15,7 +11,6 @@ export async function POST(request: NextRequest) {
       message: 'Logged out successfully',
     });
     
-    // Delete the HttpOnly cookie
     deleteAuthCookieInResponse(response);
     
     return response;

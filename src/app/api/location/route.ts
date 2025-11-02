@@ -3,12 +3,9 @@ import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
-    // Get client IP from request headers
     const forwarded = request.headers.get('x-forwarded-for');
     const ip = forwarded ? forwarded.split(',')[0] : request.headers.get('x-real-ip') || 'unknown';
     
-    // Use a free IP geolocation service (ip-api.com)
-    // Note: For production, consider using a paid service or your own IP database
     const geoResponse = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,query`);
     
     if (!geoResponse.ok) {
@@ -27,7 +24,6 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    // Return formatted location data
     return NextResponse.json({
       ip: geoData.query || ip,
       country: geoData.country,

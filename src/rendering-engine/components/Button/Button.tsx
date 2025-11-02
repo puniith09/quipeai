@@ -62,7 +62,6 @@ export const Button: React.FC<ButtonProps> = ({
       onClick();
     } else if (action) {
       logger.log('Button action:', action);
-      // You can dispatch custom events or handle actions here
     }
   };
 

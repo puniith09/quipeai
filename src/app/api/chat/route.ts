@@ -21,7 +21,6 @@ interface ChatRequest {
 
 export async function POST(request: NextRequest) {
   try {
-    // Get API key from server-side environment variable (not exposed to client)
     const apiKey = process.env.OPENROUTER_API_KEY;
     
     if (!apiKey) {
@@ -31,7 +30,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check authentication status from cookie
     let isAuthenticated = false;
     let userId = '';
     try {
@@ -46,13 +44,10 @@ export async function POST(request: NextRequest) {
       }
     } catch (error) {
       logger.debug('🔐', 'Auth check failed', { error });
-      // Continue as unauthenticated
     }
 
-    // Parse request body
     const body: ChatRequest = await request.json();
     
-    // Validate request
     if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
       return NextResponse.json(
         { error: 'Invalid request: messages array is required' },
@@ -60,14 +55,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Dynamically load available components and their schemas
     const availableComponents = body.suggestedComponents && body.suggestedComponents.length > 0
       ? body.suggestedComponents // Use suggested components if provided
       : getAvailableComponents(); // Otherwise use all available
       
     const allSchemas = getAllComponentSchemas();
     
-    // Filter schemas to only include suggested components
     const relevantSchemas: Record<string, unknown> = {};
     availableComponents.forEach(component => {
       if (allSchemas[component]) {
@@ -75,7 +68,6 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Log what components are being provided to the AI
     if (body.responseType === 'components') {
       logger.debug('🎨', 'AI Component Generation', {
         requested: body.suggestedComponents || 'all',
@@ -84,12 +76,10 @@ export async function POST(request: NextRequest) {
       });
     }
     
-    // Generate dynamic examples from relevant schemas only
     const schemaExamples = Object.entries(relevantSchemas)
       .map(([name, schema]) => `${name.charAt(0).toUpperCase() + name.slice(1)} Component:\n${JSON.stringify(schema, null, 2)}`)
       .join('\n\n');
 
-    // Determine system prompt based on response type
     const isComponentRequest = body.responseType === 'components';
     
     const systemPrompt = isComponentRequest 
@@ -138,23 +128,19 @@ LOGIN ENCOURAGEMENT STRATEGY:
 Your style should feel like chatting with a friend - engaging, descriptive, and thoughtful.`;
 
 
-    // Build messages with system prompt
     const messagesWithSystem = [
       { role: 'system', content: systemPrompt },
       ...body.messages
     ];
 
-    // Add auth tools for text responses (not component generation)
     const tools = !isComponentRequest ? getAuthToolDefinitions() : undefined;
     
     if (tools && tools.length > 0) {
       logger.debug('🔧', 'Auth Tools Available', { count: tools.length, tools: tools.map(t => t.function.name) });
     }
 
-    // Disable streaming when tools are present (OpenRouter needs JSON response to return tool calls)
     const shouldStream = body.stream && !(tools && tools.length > 0);
 
-    // Use Cerebras for tool calling (ultra-fast), OpenAI for regular chat
     const modelConfig = (tools && tools.length > 0) 
       ? {
           model: 'openai/gpt-oss-120b', // Cerebras: 0.31s latency, supports tool calling
@@ -171,7 +157,6 @@ Your style should feel like chatting with a friend - engaging, descriptive, and 
           },
         };
 
-    // Call OpenRouter API from server
     const requestBody = {
       ...modelConfig,
       messages: messagesWithSystem,
@@ -206,8 +191,6 @@ Your style should feel like chatting with a friend - engaging, descriptive, and 
       );
     }
 
-    // FIRST: Check for non-streaming response or tool calls
-    // If we have tools, we need to check the response for tool calls before streaming
     const hasTools = requestBody.tools && requestBody.tools.length > 0;
     logger.debug('🔍', 'Response handling', { hasTools, stream: body.stream });
     
@@ -222,22 +205,17 @@ Your style should feel like chatting with a friend - engaging, descriptive, and 
       }
       logger.debug('✅', 'JSON received', { hasToolCalls: !!data.choices?.[0]?.message?.tool_calls });
       
-      // Check if AI wants to call a tool
       if (data.choices?.[0]?.message?.tool_calls) {
         const toolCalls = data.choices[0].message.tool_calls;
         logger.info('🔧', 'AI requested tool calls', { count: toolCalls.length });
         
-        // Execute the first tool call (can be extended for multiple)
         const toolCall = toolCalls[0];
         const toolName = toolCall.function.name;
         const toolArgs = JSON.parse(toolCall.function.arguments);
         
-        // Execute auth tool
         const toolResult = await executeAuthTool(toolName, toolArgs);
         
         if (toolResult.success) {
-          // Tool executed successfully - now get AI's natural response
-          // Add tool result to conversation so AI knows what happened
           const toolResponseMessages = [
             ...messagesWithSystem,
             {
@@ -256,7 +234,6 @@ Your style should feel like chatting with a friend - engaging, descriptive, and 
             }
           ];
 
-          // Ask AI to craft a natural response based on tool result
           const finalResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -277,7 +254,6 @@ Your style should feel like chatting with a friend - engaging, descriptive, and 
           const finalData = await finalResponse.json();
           const aiResponse = finalData.choices?.[0]?.message?.content || 'Done!';
 
-          // Return AI's natural response with components
           return NextResponse.json({
             choices: [{
               message: {
@@ -292,7 +268,6 @@ Your style should feel like chatting with a friend - engaging, descriptive, and 
             }]
           });
         } else {
-          // Tool failed - also get AI's natural error response
           const toolResponseMessages = [
             ...messagesWithSystem,
             {
@@ -348,19 +323,14 @@ Your style should feel like chatting with a friend - engaging, descriptive, and 
         }
       }
       
-      // If no tool calls, return normal JSON response
       if (!body.stream) {
         return NextResponse.json(data);
       }
       
-      // If stream was requested but tools were present, we already consumed the response
-      // So we need to return the data as-is (can't stream it now)
       return NextResponse.json(data);
     }
 
-    // Handle streaming response (only if no tools)
     if (body.stream && response.body) {
-      // Create a custom stream with character-by-character delay
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       const encoder = new TextEncoder();
@@ -372,10 +342,8 @@ Your style should feel like chatting with a friend - engaging, descriptive, and 
               const { done, value } = await reader.read();
               if (done) break;
 
-              // Decode the chunk
               const chunk = decoder.decode(value, { stream: true });
               
-              // Parse SSE format and extract characters
               const lines = chunk.split('\n');
               for (const line of lines) {
                 if (line.startsWith('data: ')) {
@@ -390,9 +358,7 @@ Your style should feel like chatting with a friend - engaging, descriptive, and 
                     const content = parsed.choices?.[0]?.delta?.content;
                     
                     if (content) {
-                      // Send each character with a delay
                       for (const char of content) {
-                        // Recreate SSE format with single character
                         const sseData = {
                           ...parsed,
                           choices: [{
@@ -404,15 +370,12 @@ Your style should feel like chatting with a friend - engaging, descriptive, and 
                         const sseLine = `data: ${JSON.stringify(sseData)}\n\n`;
                         controller.enqueue(encoder.encode(sseLine));
                         
-                        // Delay between characters (30ms for readable speed)
                         await new Promise(resolve => setTimeout(resolve, 12));
                       }
                     } else {
-                      // Pass through non-content chunks as-is
                       controller.enqueue(encoder.encode(line + '\n'));
                     }
                   } catch {
-                    // Pass through unparseable lines
                     controller.enqueue(encoder.encode(line + '\n'));
                   }
                 } else if (line) {
@@ -437,7 +400,6 @@ Your style should feel like chatting with a friend - engaging, descriptive, and 
       });
     }
     
-    // This should never be reached as we handle all cases above
     logger.error('❌ Unexpected state reached in chat API');
     return NextResponse.json({ error: 'Unexpected state' }, { status: 500 });
     

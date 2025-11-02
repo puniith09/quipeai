@@ -1,4 +1,3 @@
-// New Relic monitoring for QuipeAI
 interface NetworkInformation {
   effectiveType?: '4g' | '3g' | '2g' | 'slow-2g';
   type?: string;
@@ -49,13 +48,11 @@ const generateUserId = () => {
   return stored;
 };
 
-// Cache browser info to avoid sending redundant data with every event
 let cachedBrowserInfo: Record<string, unknown> | null = null;
 
 const getBrowserInfo = (forceRefresh = false) => {
   if (typeof window === 'undefined') return { environment: 'server', sessionId, userId };
   
-  // Return cached browser info unless explicitly requested to refresh
   if (cachedBrowserInfo && !forceRefresh) {
     return {
       ...cachedBrowserInfo,
@@ -70,24 +67,18 @@ const getBrowserInfo = (forceRefresh = false) => {
   const connection = nav.connection || nav.mozConnection || nav.webkitConnection;
   const locationData = getLocationData();
   
-  // Additional location inference without consent
   const inferredLocation = {
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     timezoneOffset: new Date().getTimezoneOffset(),
     locale: nav.language,
     currency: getCurrencyFromLocale(),
-    // Prioritize browser locale for country detection over IP
     browserCountry: Intl.DateTimeFormat().resolvedOptions().locale?.split('-')[1] || null,
-    // Infer region from timezone
     inferredRegion: getRegionFromTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone),
-    // Get likely country from timezone (more accurate for Indian users)
     inferredCountry: getCountryFromTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone),
-    // Smart country detection: prefer timezone/locale over IP if they indicate India
     smartCountry: getSmartCountryDetection(nav.language, Intl.DateTimeFormat().resolvedOptions().timeZone, locationData.country as string | null)
   };
   
   cachedBrowserInfo = {
-    // Browser Details
     userAgent: nav.userAgent,
     platform: nav.platform,
     language: nav.language,
@@ -95,63 +86,52 @@ const getBrowserInfo = (forceRefresh = false) => {
     cookieEnabled: nav.cookieEnabled,
     onLine: nav.onLine,
     
-    // Browser Type Detection
     browserName: getBrowserName(),
     browserVersion: getBrowserVersion(),
     isMobile: /Mobile|Android|iPhone|iPad|iPod|BlackBerry|Opera Mini/i.test(nav.userAgent),
     isTablet: /iPad|Android/i.test(nav.userAgent) && !/Mobile/i.test(nav.userAgent),
     
-    // Screen Information
     screenWidth: screen.width,
     screenHeight: screen.height,
     screenColorDepth: screen.colorDepth,
     screenPixelDepth: screen.pixelDepth,
     
-    // Viewport Information
     viewportWidth: window.innerWidth,
     viewportHeight: window.innerHeight,
     devicePixelRatio: window.devicePixelRatio || 1,
     
-    // Network Information
     connectionType: getConnectionType(connection),
     estimatedISP: getISPFromConnection(connection),
     
-    // Page Information
     url: window.location.href,
     hostname: window.location.hostname,
     pathname: window.location.pathname,
     referrer: document.referrer,
     
-    // Session Information
     sessionId,
     userId,
     
-    // Feature Detection
     hasLocalStorage: typeof(Storage) !== "undefined",
     hasSessionStorage: typeof(Storage) !== "undefined",
     hasWebGL: !!window.WebGLRenderingContext,
     hasTouchScreen: 'ontouchstart' in window || navigator.maxTouchPoints > 0,
     hasGeolocation: !!navigator.geolocation,
     
-    // PWA Detection
     isPWAInstalled: getPWAInstallationStatus(),
     displayMode: getPWADisplayMode(),
     isStandalone: window.matchMedia('(display-mode: standalone)').matches,
     hasServiceWorker: 'serviceWorker' in navigator,
     isInWebAppiOSCapable: (window.navigator as { standalone?: boolean }).standalone === true,
     
-    // Performance Timing (calculated once)
     loadTime: performance.timing ? performance.timing.loadEventEnd - performance.timing.navigationStart : null,
     domContentLoadedTime: performance.timing ? performance.timing.domContentLoadedEventEnd - performance.timing.navigationStart : null,
     
-    // Derived Metrics
     deviceCategory: /Mobile|Android|iPhone|iPad|iPod|BlackBerry|Opera Mini/i.test(nav.userAgent) ? 'mobile' : 
                    /iPad|Android/i.test(nav.userAgent) && !/Mobile/i.test(nav.userAgent) ? 'tablet' : 'desktop',
     screenSize: `${screen.width}x${screen.height}`,
     viewportSize: `${window.innerWidth}x${window.innerHeight}`,
     browserEngine: `${getBrowserName()} ${getBrowserVersion()}`,
     
-    // Location Data (IP-based + inferred from timezone/locale)
     ...locationData,
     ...inferredLocation
   };
@@ -170,7 +150,6 @@ const getUserMetrics = (incrementCounters = false) => {
   const data = JSON.parse(sessionStorage.getItem('quipe_session_data') || '{}');
   const now = Date.now();
   
-  // Only increment counters when explicitly requested (e.g., new page loads)
   if (incrementCounters) {
     data.pageViews = (data.pageViews || 0) + 1;
     data.totalEvents = (data.totalEvents || 0) + 1;
@@ -210,7 +189,6 @@ const requestLocationData = async () => {
   if (typeof window === 'undefined') return;
   
   try {
-    // Get IP-based location only (no GPS permission needed)
     const ipLocationResponse = await fetch('/api/location');
     if (ipLocationResponse.ok) {
       const ipLocation = await ipLocationResponse.json();
@@ -251,7 +229,6 @@ const getCurrencyFromLocale = () => {
   if (typeof window === 'undefined') return null;
   try {
     const locale = navigator.language;
-    // Common currency mappings for major locales
     const currencyMap: { [key: string]: string } = {
       'en-US': 'USD', 'en-GB': 'GBP', 'en-IN': 'INR', 'en-AU': 'AUD', 'en-CA': 'CAD',
       'de-DE': 'EUR', 'fr-FR': 'EUR', 'es-ES': 'EUR', 'it-IT': 'EUR', 'nl-NL': 'EUR',
@@ -271,7 +248,6 @@ const getRegionFromTimezone = (timezone: string) => {
 
 const getCountryFromTimezone = (timezone: string) => {
   if (!timezone) return null;
-  // Common timezone to country mappings
   const timezoneCountryMap: { [key: string]: string } = {
     'Asia/Kolkata': 'IN', 'Asia/Mumbai': 'IN', 'Asia/Delhi': 'IN',
     'America/New_York': 'US', 'America/Los_Angeles': 'US', 'America/Chicago': 'US',
@@ -283,40 +259,33 @@ const getCountryFromTimezone = (timezone: string) => {
 };
 
 const getSmartCountryDetection = (language: string, timezone: string, ipCountry: string | null) => {
-  // If timezone indicates India, prefer that over IP location
   if (timezone === 'Asia/Kolkata' || timezone === 'Asia/Mumbai' || timezone === 'Asia/Delhi') {
     return 'IN';
   }
   
-  // If browser language indicates India, prefer that
   if (language.includes('IN') || language.startsWith('hi') || language.startsWith('ta') || language.startsWith('te')) {
     return 'IN';
   }
   
-  // If timezone is Asian but IP says US, user might be using VPN - prefer timezone
   if (timezone.startsWith('Asia/') && ipCountry === 'US') {
     const timezoneCountry = getCountryFromTimezone(timezone);
     if (timezoneCountry) return timezoneCountry;
   }
   
-  // Fall back to IP country
   return ipCountry;
 };
 
 const getPWAInstallationStatus = () => {
   if (typeof window === 'undefined') return false;
   
-  // Check if running in standalone mode (installed PWA)
   if (window.matchMedia('(display-mode: standalone)').matches) {
     return true;
   }
   
-  // Check iOS Safari standalone mode
   if ((window.navigator as { standalone?: boolean }).standalone === true) {
     return true;
   }
   
-  // Check if launched from home screen (Android)
   if (window.matchMedia('(display-mode: minimal-ui)').matches) {
     return true;
   }
@@ -356,7 +325,6 @@ const getConnectionType = (connection?: NetworkInformation) => {
 const getISPFromConnection = (connection?: NetworkInformation) => {
   if (!connection) return null;
   
-  // Estimate ISP type based on connection characteristics
   if (connection.effectiveType === '4g' && connection.downlink && connection.downlink > 10) {
     return 'fiber_or_5g';
   } else if (connection.effectiveType === '4g') {
@@ -417,9 +385,7 @@ export const initializeNewRelic = () => {
   const visitCount = parseInt(localStorage.getItem('quipe_visit_count') || '0') + 1;
   localStorage.setItem('quipe_visit_count', visitCount.toString());
 
-  // Request IP-based location data for analytics
   requestLocationData().then(() => {
-    // Refresh browser info cache after location data is available
     cachedBrowserInfo = null;
     getBrowserInfo(true); // Force refresh to include location data
   });

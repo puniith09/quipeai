@@ -15,7 +15,6 @@ export const Header: React.FC<HeaderProps> = ({ onSettingsClick }) => {
   
   const handleSettingsClick = async () => {
     if (isAuthenticated) {
-      // Log out the user
       await logout();
       showToast(
         <>
@@ -24,7 +23,6 @@ export const Header: React.FC<HeaderProps> = ({ onSettingsClick }) => {
         'success'
       );
     } else if (onSettingsClick) {
-      // If not authenticated, use the original settings handler
       onSettingsClick();
     }
   };

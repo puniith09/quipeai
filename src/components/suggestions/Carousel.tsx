@@ -55,17 +55,15 @@ export const Carousel: React.FC = () => {
 
   useEffect(() => {
     const handleScroll = () => {
-      // Clear existing timeout
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
       }
 
-      // Throttle: wait 100ms after last scroll to update
       scrollTimeoutRef.current = setTimeout(() => {
         if (!scrollRef.current) return;
         
         const scrollLeft = scrollRef.current.scrollLeft;
-        const cardWidth = window.innerWidth - 40 + 24; // Full width minus padding (20px each side) + gap (1.5rem = 24px)
+        const cardWidth = window.innerWidth - 40 + 24;
         const index = Math.round(scrollLeft / cardWidth);
         setActiveIndex(Math.max(0, Math.min(index, slides.length - 1)));
       }, 100);
@@ -85,7 +83,7 @@ export const Carousel: React.FC = () => {
 
   const scrollToIndex = (index: number) => {
     if (!scrollRef.current) return;
-    const cardWidth = window.innerWidth - 40 + 24; // Full width minus padding (20px each side) + gap (1.5rem = 24px)
+    const cardWidth = window.innerWidth - 40 + 24;
     scrollRef.current.scrollTo({
       left: index * cardWidth,
       behavior: 'smooth'
@@ -133,7 +131,6 @@ export const Carousel: React.FC = () => {
         ))}
       </div>
       
-      {/* Dots indicator */}
       <div className="flex justify-center gap-1.5 mt-3">
         {slides.map((_, index) => (
           <button

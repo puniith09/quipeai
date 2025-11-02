@@ -1,9 +1,3 @@
-/**
- * Supermemory Client
- * 
- * Core client for QuipeAI's spatiotemporal knowledge graph.
- * Handles all interactions with Supermemory API using the official SDK.
- */
 
 import Supermemory from 'supermemory';
 import { logger } from '@/lib/logger';
@@ -14,21 +8,14 @@ if (!SUPERMEMORY_API_KEY) {
   throw new Error('Missing SUPERMEMORY_API_KEY in environment variables');
 }
 
-// Initialize Supermemory client
 export const supermemory = new Supermemory({
   apiKey: SUPERMEMORY_API_KEY,
 });
 
-/**
- * Memory metadata interface
- */
 export interface MemoryMetadata {
   [key: string]: string | number | boolean | string[];
 }
 
-/**
- * Search filter interface
- */
 export interface SearchFilters {
   AND?: Array<{
     key: string;
@@ -46,15 +33,6 @@ export interface SearchFilters {
   }>;
 }
 
-/**
- * Add a memory to Supermemory
- * 
- * @param content - Text content to store
- * @param containerTags - Tags to group memories (zones, user IDs, business IDs)
- * @param metadata - Additional searchable metadata
- * @param customId - Optional custom ID for idempotent operations
- * @returns Memory ID and status
- */
 export async function addMemory(
   content: string,
   containerTags: string[],
@@ -90,30 +68,19 @@ export async function addMemory(
   }
 }
 
-/**
- * Search memories with filters
- * 
- * @param query - Search query
- * @param containerTags - Filter by container tags
- * @param filters - Additional metadata filters
- * @param limit - Max results (default: 10)
- * @returns Search results
- */
 export async function searchMemories(
   query: string,
   containerTags?: string[],
   filters?: SearchFilters,
   limit: number = 10
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-): Promise<any[]> {
+): Promise<unknown[]> {
   try {
     logger.info('Searching memories', { query, containerTags, limit });
 
     const result = await supermemory.search.documents({
       q: query,
       containerTags: containerTags || [],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      filters: filters as any, // SDK expects Or | And type
+      filters: filters as unknown as Parameters<typeof supermemory.search.documents>[0]['filters'],
       limit,
     });
 
@@ -126,23 +93,13 @@ export async function searchMemories(
   }
 }
 
-/**
- * List memories with pagination
- * 
- * @param containerTags - Filter by container tags
- * @param filters - Additional metadata filters
- * @param page - Page number (default: 1)
- * @param limit - Items per page (default: 100)
- * @returns Paginated memories
- */
 export async function listMemories(
   containerTags?: string[],
   filters?: SearchFilters,
   page: number = 1,
   limit: number = 100
 ): Promise<{
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  memories: any[];
+  memories: unknown[];
   pagination: {
     currentPage: number;
     totalPages: number;
@@ -155,8 +112,7 @@ export async function listMemories(
 
     const result = await supermemory.memories.list({
       containerTags: containerTags || [],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      filters: filters as any, // SDK expects Or | And type
+      filters: filters as never,
       page,
       limit,
     });
@@ -181,12 +137,6 @@ export async function listMemories(
   }
 }
 
-/**
- * Delete a single memory by ID
- * 
- * @param memoryId - Memory ID to delete
- * @returns Success status
- */
 export async function deleteMemory(memoryId: string): Promise<boolean> {
   try {
     logger.info('Deleting memory', { memoryId });
@@ -202,14 +152,6 @@ export async function deleteMemory(memoryId: string): Promise<boolean> {
   }
 }
 
-/**
- * Bulk delete memories by container tags
- * 
- * Note: SDK doesn't have bulkDelete method yet, using direct API call
- * 
- * @param containerTags - Container tags to delete
- * @returns Deletion result
- */
 export async function bulkDeleteByTags(
   containerTags: string[]
 ): Promise<{
@@ -220,7 +162,6 @@ export async function bulkDeleteByTags(
   try {
     logger.info('Bulk deleting by tags', { containerTags });
 
-    // Use direct API call since SDK doesn't have bulkDelete yet
     const response = await fetch('https://api.supermemory.ai/v3/documents/bulk', {
       method: 'DELETE',
       headers: {
@@ -252,14 +193,6 @@ export async function bulkDeleteByTags(
   }
 }
 
-/**
- * Update a memory by ID
- * 
- * @param memoryId - Memory ID to update
- * @param content - New content
- * @param metadata - New metadata
- * @returns Update result
- */
 export async function updateMemory(
   memoryId: string,
   content?: string,
@@ -285,14 +218,7 @@ export async function updateMemory(
   }
 }
 
-/**
- * Get a single memory by ID
- * 
- * @param memoryId - Memory ID
- * @returns Memory details
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function getMemory(memoryId: string): Promise<any> {
+export async function getMemory(memoryId: string): Promise<unknown> {
   try {
     logger.info('Getting memory', { memoryId });
 

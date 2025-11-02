@@ -1,9 +1,3 @@
-/**
- * User Context Management
- * 
- * Manages persistent user preferences, learning, and context across sessions.
- * Each user has a permanent container tag that never expires.
- */
 
 import { logger } from '@/lib/logger';
 import {
@@ -21,9 +15,6 @@ import {
   type GridSize,
 } from './zone-utils';
 
-/**
- * User profile interface
- */
 export interface UserProfile {
   userId: string;
   homeZone?: {
@@ -50,9 +41,6 @@ export interface UserProfile {
   };
 }
 
-/**
- * Interaction type for tracking user activity
- */
 export interface UserInteraction {
   type: 'search' | 'view' | 'booking' | 'favorite' | 'review';
   businessId?: string;
@@ -63,29 +51,13 @@ export interface UserInteraction {
     lat: number;
     lng: number;
   };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
-/**
- * Get user container tag
- * 
- * @param userId - User ID
- * @returns Container tag for user
- */
 export function getUserContainerTag(userId: string): string {
   return `user_${userId}`;
 }
 
-/**
- * Initialize user context
- * 
- * Creates the initial user profile memory when a user first signs up.
- * 
- * @param userId - User ID
- * @param initialData - Optional initial profile data
- * @returns User profile memory ID
- */
 export async function initializeUserContext(
   userId: string,
   initialData?: Partial<UserProfile>
@@ -137,14 +109,6 @@ export async function initializeUserContext(
   };
 }
 
-/**
- * Get user profile
- * 
- * Retrieves the user's profile from Supermemory.
- * 
- * @param userId - User ID
- * @returns User profile or null if not found
- */
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
   const userTag = getUserContainerTag(userId);
 
@@ -153,7 +117,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
       'User Profile',
       [userTag],
       {
-        AND: [{ key: 'type', value: 'user_profile', filterType: 'array_contains' }],
+        AND: [{ key: 'type', value: 'user_profile', filterType: 'array_contains' as const }],
       },
       1
     );
@@ -163,30 +127,36 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
       return null;
     }
 
-    // Parse profile from metadata
-    const result = results[0];
+    const result = results[0] as { metadata?: Record<string, unknown> };
+    const metadata = (result.metadata || {}) as Record<string, unknown>;
+    
     const profile: UserProfile = {
       userId,
       preferences: {
-        favoriteCategories: result.metadata?.favoriteCategories || [],
-        priceRange: result.metadata?.priceRange || { min: 0, max: 10000 },
-        dietaryRestrictions: result.metadata?.dietaryRestrictions,
-        interests: result.metadata?.interests || [],
+        favoriteCategories: (metadata.favoriteCategories as string[]) || [],
+        priceRange: (metadata.priceRange as { min: number; max: number }) || { min: 0, max: 10000 },
+        dietaryRestrictions: metadata.dietaryRestrictions as string[] | undefined,
+        interests: (metadata.interests as string[]) || [],
       },
       interactions: {
-        totalSearches: result.metadata?.totalSearches || 0,
-        totalBookings: result.metadata?.totalBookings || 0,
-        lastActive: result.metadata?.lastActive || new Date().toISOString(),
+        totalSearches: (metadata.totalSearches as number) || 0,
+        totalBookings: (metadata.totalBookings as number) || 0,
+        lastActive: (metadata.lastActive as string) || new Date().toISOString(),
       },
       learningData: {
-        frequentSearchTerms: result.metadata?.frequentSearchTerms || [],
-        preferredBusinessTypes: result.metadata?.preferredBusinessTypes || [],
-        avgSpending: result.metadata?.avgSpending || 0,
+        frequentSearchTerms: (metadata.frequentSearchTerms as string[]) || [],
+        preferredBusinessTypes: (metadata.preferredBusinessTypes as string[]) || [],
+        avgSpending: (metadata.avgSpending as number) || 0,
       },
     };
 
-    if (result.metadata?.homeZone) {
-      profile.homeZone = result.metadata.homeZone;
+    if (metadata.homeZone) {
+      profile.homeZone = metadata.homeZone as {
+        lat: number;
+        lng: number;
+        gridSize: GridSize;
+        tag: string;
+      };
     }
 
     logger.info('User profile retrieved', { userId });
@@ -198,15 +168,6 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
   }
 }
 
-/**
- * Update user context
- * 
- * Records a user interaction and updates the user's learning profile.
- * 
- * @param userId - User ID
- * @param interaction - User interaction data
- * @returns Success status
- */
 export async function updateUserContext(
   userId: string,
   interaction: UserInteraction
@@ -214,7 +175,6 @@ export async function updateUserContext(
   const userTag = getUserContainerTag(userId);
 
   try {
-    // Create interaction memory
     const content = `${interaction.type}: ${interaction.searchQuery || interaction.businessType || 'activity'} at ${interaction.timestamp.toISOString()}`;
 
     const metadata: MemoryMetadata = {
@@ -239,10 +199,6 @@ export async function updateUserContext(
       businessId: interaction.businessId,
     });
 
-    // TODO: Update user profile with learning data (implement in Phase 2)
-    // - Increment counters
-    // - Update frequent searches
-    // - Adjust preferences
 
     return true;
   } catch (error) {
@@ -251,16 +207,6 @@ export async function updateUserContext(
   }
 }
 
-/**
- * Set user home zone
- * 
- * Stores the user's home location for personalized zone resolution.
- * 
- * @param userId - User ID
- * @param lat - Home latitude
- * @param lng - Home longitude
- * @returns Success status
- */
 export async function setUserHomeZone(
   userId: string,
   lat: number,
@@ -278,7 +224,6 @@ export async function setUserHomeZone(
       return false;
     }
 
-    // Update profile with home zone
     const userTag = getUserContainerTag(userId);
     const content = `User Profile for ${userId}\nHome Zone: ${zoneTag}\nPreferences: ${JSON.stringify(profile.preferences, null, 2)}`;
 
@@ -315,19 +260,6 @@ export async function setUserHomeZone(
   }
 }
 
-/**
- * Resolve user zone (boundary handling)
- * 
- * Determines which zone a user should search in, handling edge cases:
- * - User near zone boundary: search in multiple zones
- * - User at home: use home zone preferences
- * - New user: use current location zone
- * 
- * @param userId - User ID
- * @param currentLat - Current latitude
- * @param currentLng - Current longitude
- * @returns Array of zone tags to search
- */
 export async function resolveUserZone(
   userId: string,
   currentLat: number,
@@ -337,7 +269,6 @@ export async function resolveUserZone(
   const currentZone = getZoneForCoordinates(currentLat, currentLng);
   const zones: string[] = [currentZone];
 
-  // If user has home zone and is near home, include home zone
   if (profile?.homeZone) {
     const isNearHome = isWithinZone(
       currentLat,
@@ -352,7 +283,6 @@ export async function resolveUserZone(
     }
   }
 
-  // TODO: Add neighboring zones if user is near boundary (Phase 2)
 
   logger.info('Resolved user zones', {
     userId,
@@ -363,21 +293,10 @@ export async function resolveUserZone(
   return zones;
 }
 
-/**
- * Get user interaction history
- * 
- * Retrieves recent user interactions for personalization.
- * 
- * @param userId - User ID
- * @param limit - Max interactions to return
- * @returns Array of interaction memories
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getUserInteractionHistory(
   userId: string,
   limit: number = 50
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-): Promise<any[]> {
+): Promise<unknown[]> {
   const userTag = getUserContainerTag(userId);
 
   try {
@@ -385,7 +304,7 @@ export async function getUserInteractionHistory(
       'interaction',
       [userTag],
       {
-        AND: [{ key: 'type', value: 'user_interaction', filterType: 'array_contains' }],
+        AND: [{ key: 'type', value: 'user_interaction', filterType: 'array_contains' as const }],
       },
       limit
     );
@@ -402,14 +321,6 @@ export async function getUserInteractionHistory(
   }
 }
 
-/**
- * Get user favorites
- * 
- * Retrieves businesses the user has favorited.
- * 
- * @param userId - User ID
- * @returns Array of favorite business IDs
- */
 export async function getUserFavorites(userId: string): Promise<string[]> {
   const userTag = getUserContainerTag(userId);
 
@@ -427,7 +338,7 @@ export async function getUserFavorites(userId: string): Promise<string[]> {
     );
 
     const favorites = results
-      .map((r) => r.metadata?.businessId)
+      .map((r) => (r as { metadata?: Record<string, unknown> }).metadata?.businessId)
       .filter((id): id is string => !!id);
 
     logger.info('User favorites retrieved', {

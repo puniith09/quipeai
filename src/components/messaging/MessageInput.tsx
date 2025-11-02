@@ -27,7 +27,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       }
       
       setMessageText('');
-      // Clear the div content
       if (divRef.current) {
         divRef.current.innerText = '';
       }
@@ -35,7 +34,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   const handleAttachmentPress = () => {
-    // TODO: Implement file attachment functionality
   };
 
   const handleDivInput = (event: React.FormEvent<HTMLDivElement>) => {

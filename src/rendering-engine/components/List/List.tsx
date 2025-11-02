@@ -14,10 +14,6 @@ export interface ListProps {
   children?: React.ReactNode;
 }
 
-/**
- * List Component
- * Displays a list of items with various styles
- */
 export const List: React.FC<ListProps> = ({
   items,
   variant = 'bullets',
@@ -29,21 +25,18 @@ export const List: React.FC<ListProps> = ({
   align = 'left',
   children,
 }) => {
-  // Variant styles
   const variantClasses = {
     bullets: 'list-disc',
     numbers: 'list-decimal',
     none: 'list-none',
   };
 
-  // Alignment classes
   const alignClasses = {
     left: 'text-left',
     center: 'text-center',
     right: 'text-right',
   };
 
-  // Build className
   const className = [
     variantClasses[variant],
     alignClasses[align],
@@ -52,14 +45,12 @@ export const List: React.FC<ListProps> = ({
     .filter(Boolean)
     .join(' ');
 
-  // Build inline styles for the list container
   const containerStyle: React.CSSProperties = {
     ...(color && { color }),
     ...(fontSize && { fontSize }),
     ...(fontWeight && { fontWeight }),
   };
 
-  // Build inline styles for list items
   const itemStyle: React.CSSProperties = {
     ...(spacing && { marginBottom: spacing }),
   };
