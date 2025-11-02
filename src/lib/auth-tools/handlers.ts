@@ -336,7 +336,7 @@ Requirements:
       });
     }
 
-    const token = generateToken({
+    const token = await generateToken({
       userId: user.id,
       verificationId: check.id || '',
     });
