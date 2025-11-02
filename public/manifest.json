@@ -1,10 +1,10 @@
 {
-  "name": "quipe",
-  "short_name": "quipe",
-  "description": "quipe Progressive Web Application",
-  "start_url": "/?source=pwa",
+  "name": "QuipeAI",
+  "short_name": "Quipe",
+  "description": "QuipeAI Progressive Web Application",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "transparent",
+  "background_color": "#ffffff",
   "theme_color": "#ffffff",
   "orientation": "portrait-primary",
   "scope": "/",
@@ -14,34 +14,16 @@
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
       "src": "/quipe192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
       "src": "/quipe512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/quipe192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/quipe512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     }
   ],
   "shortcuts": [
@@ -49,7 +31,7 @@
       "name": "Open Chat",
       "short_name": "Chat",
       "description": "Start a new conversation",
-      "url": "/?source=pwa-shortcut",
+      "url": "/",
       "icons": [
         {
           "src": "/quipe192x192.png",

@@ -16,15 +16,23 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default", // White status bar
+    statusBarStyle: "default",
     title: "QuipeAI",
   },
   formatDetection: {
     telephone: false,
   },
   icons: {
-    icon: "/icon.svg",
-    apple: "/icon.svg",
+    icon: [
+      { url: "/quipe192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/quipe512x512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/quipe192x192.png", sizes: "192x192", type: "image/png" },
+    ],
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
   },
 };
 
