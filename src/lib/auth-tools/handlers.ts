@@ -24,7 +24,10 @@ async function generateComponents(
   contextData?: Record<string, unknown>
 ): Promise<ComponentNode[]> {
   try {
-    const response = await fetch('http://localhost:3000/api/generate-components', {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : 'http://localhost:3000';
+    const response = await fetch(`${baseUrl}/api/generate-components`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -147,8 +150,10 @@ export async function handleSendOTPToPhone(args: {
   logger.info('🔧 Auth Tool Called: send_otp_to_phone', { phone: args.phoneNumber });
 
   try {
-    // Call the send-otp API
-    const response = await fetch('http://localhost:3000/api/auth/send-otp', {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : 'http://localhost:3000';
+    const response = await fetch(`${baseUrl}/api/auth/send-otp`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -222,8 +227,10 @@ export async function handleVerifyOTPCode(args: {
   logger.info('🔧 Auth Tool Called: verify_otp_code', { phone: args.phoneNumber });
 
   try {
-    // Call the verify-otp API (expects 'code' not 'otp')
-    const response = await fetch('http://localhost:3000/api/auth/verify-otp', {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : 'http://localhost:3000';
+    const response = await fetch(`${baseUrl}/api/auth/verify-otp`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
