@@ -338,7 +338,7 @@ Requirements:
 
     const token = generateToken({
       userId: user.id,
-      verificationId: check.id,
+      verificationId: check.id || '',
     });
 
     logger.info('User authenticated successfully:', user.id);

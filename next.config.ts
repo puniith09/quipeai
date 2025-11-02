@@ -11,7 +11,14 @@ const nextConfig: NextConfig = {
         tls: false,
       };
     }
+    config.optimization = {
+      ...config.optimization,
+      minimize: true,
+    };
     return config;
+  },
+  experimental: {
+    optimizePackageImports: ['@prelude.so/sdk', '@prisma/client'],
   },
 };
 
