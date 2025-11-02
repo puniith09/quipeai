@@ -31,6 +31,7 @@ async function generateComponents(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Referer': baseUrl,
       },
       body: JSON.stringify({
         prompt,
