@@ -69,29 +69,9 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
       });
 
       // ====== PARALLEL: Start Both Requests Together ======
-      // 1. Component decision + generation (background, non-blocking)
+      // 1. Component generation (background, non-blocking)
       const componentWorkflow = (async () => {
         try {
-          // Step 1: Get decision
-          const decisionResponse = await fetch('/api/component-decision', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              prompt: messageContent.trim(),
-              conversationHistory: conversationHistory.slice(-6)
-            }),
-          });
-
-          if (!decisionResponse.ok) return null;
-
-          const decision = await decisionResponse.json();
-          logger.debug('🎯', 'Component Decision', decision);
-
-          if (!decision.needsComponent) return null;
-
-          // Step 2: Generate component (if needed) - Don't show loading yet
           const componentResponse = await fetch('/api/chat', {
             method: 'POST',
             headers: {
@@ -102,7 +82,6 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
               temperature: 0.7,
               max_tokens: 1500,
               responseType: 'components',
-              suggestedComponents: decision.suggestedComponents || [],
             })
           });
 
@@ -343,48 +322,10 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
     return () => clearInterval(intervalId);
   }, [messages.length, isUserScrolling, isLoading, isLoadingComponent, scrollContainerRef]); // Only run when actively loading
 
-  /**
-   * AI-powered button press handler - generates natural user message
-   */
   const handleComponentButtonPress = async (buttonLabel: string, action?: string) => {
-    try {
-      // Get recent conversation context (last 2 exchanges = 4 messages)
-      const recentMessages = messages.slice(-4).map(msg => ({
-        role: msg.type === 'user' ? 'user' : 'assistant',
-        content: msg.content
-      }));
-
-      // Call AI to generate a natural user message
-      const response = await fetch('/api/button-interpret', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          buttonLabel,
-          action,
-          recentMessages
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const userMessage = data.message || buttonLabel;
-        
-        logger.debug('🔘', 'Button Click', { buttonLabel, generated: userMessage });
-        
-        // Send the AI-generated natural message
-        sendMessage(userMessage);
-      } else {
-        // Fallback if API fails
-        logger.warn('Button interpret API failed, using fallback');
-        sendMessage(buttonLabel);
-      }
-    } catch (error) {
-      logger.error('Error interpreting button click:', error);
-      // Fallback to button label
-      sendMessage(buttonLabel);
-    }
+    const userMessage = action || buttonLabel;
+    logger.debug('🔘', 'Button Click', { buttonLabel, message: userMessage });
+    sendMessage(userMessage);
   };
 
   return (
