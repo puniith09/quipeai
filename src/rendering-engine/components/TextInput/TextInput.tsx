@@ -25,8 +25,9 @@ interface TextInputProps {
   labelWeight?: string;
   action?: string;
   submitLabel?: string; // Label for submit button
+  submitMessage?: string; // Message to send when button is clicked (instead of input value)
   onChange?: (value: string) => void;
-  onSubmit?: (value: string) => void; // Callback when submitted
+  onSubmit?: (value: string, submitMessage?: string) => void; // Callback when submitted
   children?: React.ReactNode;
 }
 
@@ -52,6 +53,7 @@ export const TextInput: React.FC<TextInputProps> = ({
   labelWeight,
   action,
   submitLabel = 'Submit',
+  submitMessage, // NEW: Message to send when button clicked
   onChange,
   onSubmit,
   children,
@@ -76,10 +78,11 @@ export const TextInput: React.FC<TextInputProps> = ({
     if (!value.trim() || isSubmitting) return;
     
     setIsSubmitting(true);
-    logger.log('TextInput submit:', { action, value });
+    logger.log('TextInput submit:', { action, value, submitMessage });
     
     if (onSubmit) {
-      await onSubmit(value);
+      // If submitMessage is provided, use it instead of the input value
+      await onSubmit(value, submitMessage);
     }
     
     setIsSubmitting(false);
@@ -121,29 +124,18 @@ export const TextInput: React.FC<TextInputProps> = ({
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
       )}
-      <div className="flex gap-2 w-full">
-        <input
-          type={type}
-          value={value}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          disabled={disabled || isSubmitting}
-          required={required}
-          maxLength={maxLength}
-          className="flex-1 min-w-0 px-4 py-2 border border-gray-600 bg-gray-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-700 disabled:cursor-not-allowed transition-all placeholder:text-gray-400"
-          style={inputStyles}
-        />
-        {onSubmit && (
-          <button
-            onClick={handleSubmit}
-            disabled={!value.trim() || isSubmitting}
-            className="flex-shrink-0 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-all whitespace-nowrap text-sm"
-          >
-            {isSubmitting ? 'Sending...' : submitLabel}
-          </button>
-        )}
-      </div>
+      <input
+        type={type}
+        value={value}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        disabled={disabled || isSubmitting}
+        required={required}
+        maxLength={maxLength}
+        className="w-full px-4 py-2 border border-gray-600 bg-gray-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-700 disabled:cursor-not-allowed transition-all placeholder:text-gray-400"
+        style={inputStyles}
+      />
       {children}
     </div>
   );

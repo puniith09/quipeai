@@ -5,9 +5,9 @@ import { logger } from '@/lib/logger';
 
 interface User {
   id: string;
-  phoneNumber: string;
+  phoneNumber?: string; // Optional - not exposed in API responses
   sessionCount: number;
-  lastLogin: string;
+  lastLogin?: string; // Optional - may not be provided during login
 }
 
 interface AuthContextType {

@@ -5,6 +5,7 @@
     "variant": "primary",
     "size": "md",
     "action": "submit",
+    "message": "User clicked the submit button",
     "backgroundColor": "#2563eb",
     "textColor": "#ffffff",
     "borderRadius": "8px",

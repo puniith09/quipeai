@@ -12,8 +12,9 @@ import { logger } from '@/lib/logger';
 export const renderComponent = (
   node: ComponentNode,
   index: number = 0,
-  onButtonClick?: (label: string, action?: string) => void,
-  onTextInputSubmit?: (value: string, action?: string) => void
+  onButtonClick?: (label: string, action?: string, message?: string) => void,
+  onTextInputSubmit?: (value: string, action?: string, submitMessage?: string) => void,
+  onTextInputChange?: (value: string, action?: string) => void
 ): React.ReactNode => {
   // Validate component type
   if (!isValidComponentType(node.type)) {
@@ -33,7 +34,7 @@ export const renderComponent = (
 
   // Recursively render children
   const children = node.children?.map((child, childIndex) =>
-    renderComponent(child, childIndex, onButtonClick, onTextInputSubmit)
+    renderComponent(child, childIndex, onButtonClick, onTextInputSubmit, onTextInputChange)
   );
 
   // Add onClick handler for buttons and onSubmit handler for text inputs
@@ -41,11 +42,17 @@ export const renderComponent = (
   const props: any = { ...(node.props || {}) };
   
   if (node.type === 'button' && onButtonClick) {
-    props.onClick = () => onButtonClick(props.label || '', props.action);
+    props.onClick = () => onButtonClick(props.label || '', props.action, props.message);
   }
   
-  if (node.type === 'textinput' && onTextInputSubmit) {
-    props.onSubmit = (value: string) => onTextInputSubmit(value, props.action);
+  if (node.type === 'textinput') {
+    if (onTextInputSubmit) {
+      props.onSubmit = (value: string, submitMessage?: string) => 
+        onTextInputSubmit(value, props.action, submitMessage);
+    }
+    if (onTextInputChange) {
+      props.onChange = (value: string) => onTextInputChange(value, props.action);
+    }
   }
 
   // Render the component with props and children

@@ -13,6 +13,8 @@ export async function GET(request: NextRequest) {
     // Get token from HttpOnly cookie
     const token = await getAuthCookie();
     
+    logger.info('🔐 /api/auth/me called - Token present:', !!token);
+    
     if (!token) {
       return NextResponse.json(
         { authenticated: false, user: null },
@@ -44,7 +46,6 @@ export async function GET(request: NextRequest) {
       authenticated: true,
       user: {
         id: user.id,
-        phoneNumber: user.phoneNumber,
         sessionCount: user.sessionCount,
         lastLogin: user.lastLogin.toISOString(),
       },

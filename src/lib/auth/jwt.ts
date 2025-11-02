@@ -14,7 +14,6 @@ const getJWTSecret = () => {
 
 export interface UserPayload {
   userId: string;
-  phoneNumber: string;
   verificationId: string;
   iat?: number;
   exp?: number;
@@ -60,7 +59,6 @@ export async function verifyToken(token: string): Promise<UserPayload | null> {
     // Validate required fields exist
     if (
       typeof payload.userId === 'string' &&
-      typeof payload.phoneNumber === 'string' &&
       typeof payload.verificationId === 'string'
     ) {
       return payload as unknown as UserPayload;

@@ -105,10 +105,9 @@ export async function POST(request: NextRequest) {
       // 2. Create or update user in store
       const user = await createOrUpdateUser(userId, phoneNumber, verificationId);
       
-      // 3. Generate JWT token (30 days expiry)
+      // 3. Generate JWT token (30 days expiry) - only userId, no phone number
       const token = await generateToken({
         userId: user.id,
-        phoneNumber: user.phoneNumber,
         verificationId: verificationId,
       }, '30d'); // 30 days
       
@@ -117,15 +116,15 @@ export async function POST(request: NextRequest) {
         sessionCount: user.sessionCount,
       });
       
-      // Create response with user data
+      // Create response with user data and token (no phone number)
       const response = NextResponse.json({
         success: true,
         verified: true,
         verificationId: verificationId,
         message: 'Phone number verified successfully!',
+        token: token, // Include token for tool handler
         user: {
           id: user.id,
-          phoneNumber: user.phoneNumber,
           sessionCount: user.sessionCount,
           lastLogin: user.lastLogin.toISOString(),
         },
@@ -133,6 +132,8 @@ export async function POST(request: NextRequest) {
       
       // Set authentication token as HttpOnly cookie
       setAuthCookieInResponse(response, token);
+      
+      logger.info('🍪 Setting auth cookie in response', { userId: user.id, tokenLength: token.length });
       
       return response;
     } else if (check.status === 'expired_or_not_found') {

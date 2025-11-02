@@ -5,7 +5,6 @@
     "placeholder": "Type here...",
     "type": "text",
     "required": false,
-    "submitLabel": "Submit",
     "backgroundColor": "#1f2937",
     "textColor": "#ffffff",
     "borderRadius": "8px",
