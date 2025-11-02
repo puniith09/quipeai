@@ -7,6 +7,10 @@
 import { ComponentNode } from '@/rendering-engine/types';
 import { logger } from '@/lib/logger';
 import { generateComponentsWithAI } from '@/lib/component-generator';
+import Prelude from '@prelude.so/sdk';
+import { rateLimiter, RATE_LIMITS, formatTimeRemaining } from '@/lib/rate-limiter';
+import { prisma } from '@/lib/prisma';
+import { generateToken } from '@/lib/auth/jwt';
 
 export interface ToolCallResult {
   success: boolean;
@@ -131,41 +135,75 @@ export async function handleSendOTPToPhone(args: {
   logger.info('🔧 Auth Tool Called: send_otp_to_phone', { phone: args.phoneNumber });
 
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/auth/send-otp`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ phoneNumber: args.phoneNumber }),
-    });
+    const apiKey = process.env.PRELUDE_API_KEY;
+    
+    if (!apiKey) {
+      throw new Error('Prelude API key not configured');
+    }
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      // Phone number invalid - regenerate phone input with error
+    const phoneNumber = args.phoneNumber.trim();
+    
+    if (!phoneNumber.startsWith('+')) {
       const components = await generateComponents(
         `Create a phone number input form showing an error.
         
-Error message: ${data.error || 'Invalid phone number format'}
+Error message: Phone number must include country code (e.g., +1234567890)
 
 Requirements:
 - Show the error in a user-friendly way
 - Include a textinput for phone number and a submit button
-- Button should have a natural message prop
-- Remind user to include country code (+1, +44, etc.)`,
+- Button should have a natural message prop`,
         ['textinput', 'button', 'card', 'text']
       );
 
       return {
         success: false,
-        message: '', // AI will craft error message
+        message: '',
         components,
-        metadata: { error: data.error }
+        metadata: { error: 'Phone number must include country code' }
       };
     }
+
+    const rateLimitKey = `otp:send:${phoneNumber}`;
+    const isAllowed = rateLimiter.check(
+      rateLimitKey,
+      RATE_LIMITS.OTP_SEND.maxRequests,
+      RATE_LIMITS.OTP_SEND.windowMs
+    );
+
+    if (!isAllowed) {
+      const resetTime = rateLimiter.getResetTime(rateLimitKey);
+      const message = RATE_LIMITS.OTP_SEND.message.replace(
+        '{time}',
+        formatTimeRemaining(resetTime)
+      );
+
+      const components = await generateComponents(
+        `Create an error message display.
+        
+Error: ${message}
+
+Show this in a friendly way and tell the user when they can try again.`,
+        ['text', 'card']
+      );
+
+      return {
+        success: false,
+        message: '',
+        components,
+        metadata: { error: message }
+      };
+    }
+
+    const client = new Prelude({ apiToken: apiKey });
+    const verification = await client.verification.create({
+      target: {
+        type: 'phone_number',
+        value: phoneNumber,
+      },
+    });
+
+    logger.info('OTP sent successfully:', verification.id);
 
     // OTP sent successfully - generate OTP input UI
     const components = await generateComponents(
@@ -208,57 +246,114 @@ export async function handleVerifyOTPCode(args: {
   logger.info('🔧 Auth Tool Called: verify_otp_code', { phone: args.phoneNumber });
 
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/auth/verify-otp`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        phoneNumber: args.phoneNumber,
-        code: args.otpCode,  // API expects 'code' not 'otp'
-      }),
-    });
+    const apiKey = process.env.PRELUDE_API_KEY;
+    
+    if (!apiKey) {
+      throw new Error('Prelude API key not configured');
+    }
 
-    const data = await response.json();
+    const phoneNumber = args.phoneNumber.trim();
+    const code = args.otpCode.trim();
 
-    if (!response.ok) {
-      // OTP invalid - regenerate OTP input with error
+    const rateLimitKey = `otp:verify:${phoneNumber}`;
+    const isAllowed = rateLimiter.check(
+      rateLimitKey,
+      RATE_LIMITS.OTP_VERIFY.maxRequests,
+      RATE_LIMITS.OTP_VERIFY.windowMs
+    );
+
+    if (!isAllowed) {
+      const resetTime = rateLimiter.getResetTime(rateLimitKey);
+      const message = RATE_LIMITS.OTP_VERIFY.message.replace(
+        '{time}',
+        formatTimeRemaining(resetTime)
+      );
+
       const components = await generateComponents(
-        `Create an OTP code input form showing an error.
+        `Create an error message display.
         
-Error: ${data.error || 'Invalid verification code'}
+Error: ${message}
 
-Requirements:
-- Show the error message
-- Textinput for 6-digit code
-- Button to verify again (natural message prop)
-- Let user try again`,
-        ['textinput', 'button', 'card', 'text'],
-        { phoneNumber: args.phoneNumber }
+Show this in a friendly way.`,
+        ['text', 'card']
       );
 
       return {
         success: false,
-        message: '', // AI will craft error response naturally
+        message: '',
         components,
-        metadata: { error: data.error }
+        metadata: { error: message }
       };
     }
+
+    const client = new Prelude({ apiToken: apiKey });
+    
+    const check = await client.verification.check({
+      target: {
+        type: 'phone_number',
+        value: phoneNumber,
+      },
+      code: code,
+    });
+
+    if (check.status !== 'approved') {
+      const components = await generateComponents(
+        `Create an OTP verification error display.
+        
+The code entered was incorrect.
+
+Requirements:
+- Show friendly error message
+- Include another textinput to try again
+- Button to re-verify
+- Option to resend code`,
+        ['textinput', 'button', 'card', 'text']
+      );
+
+      return {
+        success: false,
+        message: '',
+        components,
+        metadata: { error: 'Incorrect verification code' }
+      };
+    }
+
+    let user = await prisma.user.findUnique({
+      where: { phoneNumber },
+    });
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: { phoneNumber },
+      });
+    } else {
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          sessionCount: { increment: 1 },
+          lastLogin: new Date(),
+        },
+      });
+    }
+
+    const token = generateToken({
+      userId: user.id,
+      verificationId: check.id,
+    });
+
+    logger.info('User authenticated successfully:', user.id);
 
     // Success! User is now authenticated
     // Return the token for client-side cookie setting (no phone number)
     return {
       success: true,
-      message: '', // AI will generate its own response
-      components: [], // No more components needed
+      message: '',
+      components: [],
       metadata: {
         authenticated: true,
-        token: data.token, // JWT token for client to set cookie
-        userId: data.user?.id,
-        sessionCount: data.user?.sessionCount,
+        token: token,
+        userId: user.id,
+        sessionCount: user.sessionCount,
       }
     };
   } catch (error) {
