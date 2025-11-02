@@ -296,7 +296,7 @@ Show this in a friendly way.`,
       code: code,
     });
 
-    if (check.status !== 'approved') {
+    if (check.status !== 'success') {
       const components = await generateComponents(
         `Create an OTP verification error display.
         
