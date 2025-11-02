@@ -6,6 +6,7 @@
 
 import { ComponentNode } from '@/rendering-engine/types';
 import { logger } from '@/lib/logger';
+import { generateComponentsWithAI } from '@/lib/component-generator';
 
 export interface ToolCallResult {
   success: boolean;
@@ -24,34 +25,13 @@ async function generateComponents(
   contextData?: Record<string, unknown>
 ): Promise<ComponentNode[]> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/generate-components`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Referer': baseUrl,
-      },
-      body: JSON.stringify({
-        prompt,
-        requiredComponents,
-        searchSupermemory: false,
-        contextData,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Component generation failed: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.components || [];
+    return await generateComponentsWithAI(prompt, requiredComponents, contextData);
   } catch (error) {
     logger.error('Failed to generate components:', error);
     return [];
   }
 }
+
 
 /**
  * Handle request_phone_otp tool call
