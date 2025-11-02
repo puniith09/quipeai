@@ -152,7 +152,7 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
                   // Show success toast
                   showToast(
                     <>
-                      <span style={{ fontWeight: 700 }}>Welcome!</span> You're now signed in.
+                      <span style={{ fontWeight: 700 }}>Welcome!</span> You&apos;re now signed in.
                     </>,
                     'success'
                   );
@@ -175,7 +175,7 @@ export const ChatWindow = React.forwardRef<ChatWindowRef, ChatWindowProps>(({ sc
               // Show success toast
               showToast(
                 <>
-                  <span style={{ fontWeight: 700 }}>Welcome!</span> You're now signed in.
+                  <span style={{ fontWeight: 700 }}>Welcome!</span> You&apos;re now signed in.
                 </>,
                 'success'
               );

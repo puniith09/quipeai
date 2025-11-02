@@ -33,15 +33,15 @@ export async function POST(request: NextRequest) {
 
     // Check authentication status from cookie
     let isAuthenticated = false;
-    let userPhone = '';
+    let userId = '';
     try {
       const authToken = await getAuthCookie();
       if (authToken) {
         const payload = await verifyToken(authToken);
         if (payload) {
           isAuthenticated = true;
-          userPhone = payload.phoneNumber;
-          logger.debug('🔐', 'Authenticated user', { userId: payload.userId, phone: userPhone });
+          userId = payload.userId;
+          logger.debug('🔐', 'Authenticated user', { userId: payload.userId });
         }
       }
     } catch (error) {
@@ -111,7 +111,7 @@ Return ONLY valid JSON. No markdown, no explanation.`
 
 Available UI components in the system: ${getAvailableComponents().join(', ')}
 
-USER AUTHENTICATION STATUS: ${isAuthenticated ? `LOGGED IN as ${userPhone}` : 'NOT LOGGED IN (Guest)'}
+USER AUTHENTICATION STATUS: ${isAuthenticated ? `LOGGED IN (userId: ${userId})` : 'NOT LOGGED IN (Guest)'}
 
 CONTEXT: You are part of a dual-response system. Your text response MAY OR MAY NOT be followed by a visual component 
 that displays content. Sometimes you'll provide a text answer, other times a component will follow.
